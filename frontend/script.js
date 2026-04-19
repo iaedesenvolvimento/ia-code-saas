@@ -82,14 +82,18 @@ function setLoading(button, state) {
 }
 
 async function register() {
+  console.log('Função register chamada');
   clearMessage();
 
   // Detectar se estamos no modo de cadastro ou login
   const isRegisterMode = !registerForm.classList.contains('hidden');
+  console.log('Modo registro:', isRegisterMode);
 
   const email = isRegisterMode ? registerEmailInput.value.trim() : emailInput.value.trim();
   const password = isRegisterMode ? registerPasswordInput.value : passwordInput.value;
   const confirmPassword = isRegisterMode ? confirmPasswordInput.value : null;
+
+  console.log('Email:', email, 'Password length:', password.length);
 
   if (!email || !password) {
     return showMessage('Preencha email e senha', 'error');
@@ -131,6 +135,7 @@ async function register() {
       data = { error: `Erro do servidor (${response.status})` };
     }
 
+    console.log('Register data:', data);
     if (response.ok) {
       showMessage('Conta criada com sucesso! Agora faça login.', 'success');
       // Limpar campos após sucesso
