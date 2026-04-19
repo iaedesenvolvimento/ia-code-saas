@@ -88,12 +88,27 @@ app.get('*', (req, res) => {
 // ===== DATABASE =====
 mongoose.connect(process.env.MONGO_URI);
 
-const User = mongoose.model('User', {
-  email: String,
-  password: String,
-  credits: Number,
-  plan: String
-});
+const User = mongoose.model('User', new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  credits: {
+    type: Number,
+    default: 5
+  },
+  plan: {
+    type: String,
+    default: 'free'
+  }
+}));
 
 // ===== AUTH MIDDLEWARE =====
 function auth(req, res, next) {
@@ -120,19 +135,43 @@ function auth(req, res, next) {
 
 // ===== REGISTER =====
 app.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const hash = await bcrypt.hash(password, 10);
+    // Validações básicas
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+    }
 
-  const user = new User({
-    email,
-    password: hash,
-    credits: 5,
-    plan: 'free'
-  });
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
+    }
 
-  await user.save();
-  res.json({ message: 'Criado' });
+    // Verificar se usuário já existe
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email já cadastrado' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      email: email.toLowerCase(),
+      password: hash,
+      credits: 5,
+      plan: 'free'
+    });
+
+    await user.save();
+    res.json({ message: 'Usuário criado com sucesso' });
+  } catch (error) {
+    console.error('Erro no registro:', error);
+    if (error.code === 11000) {
+      // Erro de duplicata do MongoDB
+      return res.status(409).json({ error: 'Email já cadastrado' });
+    }
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 // ===== LOGIN =====

@@ -54,23 +54,47 @@ function setLoading(button, state) {
 async function register() {
   clearMessage();
 
-  if (!emailInput.value || !passwordInput.value) {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
+  if (!email || !password) {
     return showMessage('Preencha email e senha', 'error');
   }
 
+  if (password.length < 6) {
+    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
+  }
+
+  // Validação básica de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return showMessage('Digite um email válido', 'error');
+  }
+
   try {
-    await fetch(`${API_BASE_URL}/register`, {
+    const response = await fetch(`${API_BASE_URL}/register`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        email: emailInput.value,
-        password: passwordInput.value
+        email: email,
+        password: password
       })
     });
 
-    showMessage('Conta criada com sucesso! Agora faça login.', 'success');
-  } catch {
-    showMessage('Erro ao registrar. Tente novamente.', 'error');
+    const data = await response.json();
+
+    if (response.ok) {
+      showMessage('Conta criada com sucesso! Agora faça login.', 'success');
+      // Limpar campos após sucesso
+      emailInput.value = '';
+      passwordInput.value = '';
+    } else {
+      // Mostrar mensagem específica do erro
+      showMessage(data.error || 'Erro ao registrar', 'error');
+    }
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    showMessage('Erro de conexão. Tente novamente.', 'error');
   }
 }
 
