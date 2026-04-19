@@ -9,6 +9,7 @@ const API_BASE_URL = window.location.hostname === 'localhost'
   : window.location.origin;
 
 function initElements() {
+  console.log('Iniciando initElements');
   messageEl = document.getElementById('message');
   emailInput = document.getElementById('email');
   passwordInput = document.getElementById('password');
@@ -49,6 +50,8 @@ function initElements() {
     newPasswordInput.addEventListener('input', () => checkPasswordStrength(newPasswordInput.value, newStrengthBar, newStrengthText));
   }
 
+  console.log('emailInput:', emailInput);
+  console.log('passwordInput:', passwordInput);
   console.log('Elementos inicializados');
 }
 
@@ -165,6 +168,8 @@ async function register() {
 
 async function login() {
   console.log('Função login chamada');
+  console.log('emailInput.value:', emailInput ? emailInput.value : 'null');
+  console.log('passwordInput.value:', passwordInput ? passwordInput.value : 'null');
   clearMessage();
 
   const email = emailInput.value.trim();
