@@ -1,12 +1,26 @@
 const CACHE_NAME = 'ai-code-v1';
-const urlsToCache = [
+
+// Detecta se estamos em produção (Render) ou desenvolvimento
+const isProduction = self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1';
+
+const urlsToCache = isProduction ? [
   '/',
   '/index.html',
   '/style.css',
   '/script.js',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/icon-192.svg',
+  '/icon-512.svg',
+  '/success.html'
+] : [
+  './',
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json',
+  './icon-192.svg',
+  './icon-512.svg',
+  './success.html'
 ];
 
 // Instalar Service Worker
@@ -56,12 +70,8 @@ self.addEventListener('fetch', (event) => {
             event.request.url.includes('/me') ||
             event.request.url.includes('/forgot-password') ||
             event.request.url.includes('/reset-password')) {
-          try {
-            const response = await fetch(event.request);
-            return response;
-          } catch (error) {
+          return fetch(event.request).catch((error) => {
             console.warn('API request failed:', error);
-            // Retorna resposta de erro válida
             return new Response(JSON.stringify({
               error: 'Serviço temporariamente indisponível',
               message: 'Tente novamente em alguns instantes'
@@ -73,7 +83,7 @@ self.addEventListener('fetch', (event) => {
                 'Cache-Control': 'no-cache'
               }
             });
-          }
+          });
         }
 
         return fetch(event.request).then((response) => {
