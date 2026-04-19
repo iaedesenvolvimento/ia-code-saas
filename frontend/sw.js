@@ -107,5 +107,6 @@ self.addEventListener('fetch', (event) => {
           // Para outros recursos, retorna erro
           return new Response('Offline', { status: 503 });
         });
+      })
   );
 });
