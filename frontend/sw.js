@@ -56,14 +56,24 @@ self.addEventListener('fetch', (event) => {
             event.request.url.includes('/me') ||
             event.request.url.includes('/forgot-password') ||
             event.request.url.includes('/reset-password')) {
-          return fetch(event.request).catch(() => {
-            // Se a API falhar, retorna uma resposta de erro
-            return new Response(JSON.stringify({ error: 'API unavailable' }), {
+          try {
+            const response = await fetch(event.request);
+            return response;
+          } catch (error) {
+            console.warn('API request failed:', error);
+            // Retorna resposta de erro válida
+            return new Response(JSON.stringify({
+              error: 'Serviço temporariamente indisponível',
+              message: 'Tente novamente em alguns instantes'
+            }), {
               status: 503,
               statusText: 'Service Unavailable',
-              headers: { 'Content-Type': 'application/json' }
+              headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+              }
             });
-          });
+          }
         }
 
         return fetch(event.request).then((response) => {
