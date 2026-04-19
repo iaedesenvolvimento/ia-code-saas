@@ -590,10 +590,11 @@ async function setupApp() {
   // Garantir estado inicial dos formulários
   console.log('authForm:', authForm);
   console.log('registerForm:', registerForm);
-  authForm.classList.remove('hidden');
-  registerForm.classList.add('hidden');
-  forgotPasswordForm.classList.add('hidden');
-  resetPasswordForm.classList.add('hidden');
+  if (authForm) authForm.classList.remove('hidden');
+  if (registerForm) registerForm.classList.add('hidden');
+  if (forgotPasswordForm) forgotPasswordForm.classList.add('hidden');
+  if (resetPasswordForm) resetPasswordForm.classList.add('hidden');
+  console.log('Formulários resetados');
 
   // Verificar se há token de redefinição de senha na URL
   const urlParams = new URLSearchParams(window.location.search);
