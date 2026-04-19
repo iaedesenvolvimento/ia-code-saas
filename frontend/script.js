@@ -642,6 +642,9 @@ if (document.readyState === 'loading') {
 }
 
 // ===== REGISTRO PWA =====
+console.log('toggleAuthMode defined:', typeof toggleAuthMode);
+console.log('register defined:', typeof register);
+console.log('login defined:', typeof login);
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
