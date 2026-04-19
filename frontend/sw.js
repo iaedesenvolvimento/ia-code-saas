@@ -1,4 +1,7 @@
-const CACHE_NAME = 'ai-code-v1';
+const CACHE_NAME = 'ai-code-v2';
+
+// Confirmação de versão do SW
+console.log('Service Worker v2 carregado');
 
 // Detecta se estamos em produção (Render) ou desenvolvimento
 const isProduction = self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1';
