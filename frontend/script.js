@@ -277,8 +277,6 @@ if (document.readyState === 'loading') {
 }
 
 // ===== REGISTRO PWA =====
-// Temporariamente desabilitado para debug
-/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -290,4 +288,3 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
-*/
