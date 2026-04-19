@@ -588,6 +588,8 @@ async function setupApp() {
   console.log('setupApp chamado');
 
   // Garantir estado inicial dos formulários
+  console.log('authForm:', authForm);
+  console.log('registerForm:', registerForm);
   authForm.classList.remove('hidden');
   registerForm.classList.add('hidden');
   forgotPasswordForm.classList.add('hidden');
