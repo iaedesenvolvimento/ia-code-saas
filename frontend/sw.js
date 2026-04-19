@@ -54,7 +54,14 @@ self.addEventListener('fetch', (event) => {
             event.request.url.includes('/checkout') ||
             event.request.url.includes('/webhook') ||
             event.request.url.includes('/me')) {
-          return fetch(event.request);
+          return fetch(event.request).catch(() => {
+            // Se a API falhar, retorna uma resposta de erro
+            return new Response(JSON.stringify({ error: 'API unavailable' }), {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
         }
 
         return fetch(event.request).then((response) => {
@@ -70,13 +77,13 @@ self.addEventListener('fetch', (event) => {
             });
 
           return response;
+        }).catch(() => {
+          // Fallback para offline
+          if (event.request.destination === 'document') {
+            return caches.match('/index.html');
+          }
+          // Para outros recursos, retorna erro
+          return new Response('Offline', { status: 503 });
         });
-      })
-      .catch(() => {
-        // Fallback para offline
-        if (event.request.destination === 'document') {
-          return caches.match('/index.html');
-        }
-      })
   );
 });
