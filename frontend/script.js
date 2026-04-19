@@ -1,6 +1,9 @@
 let token = '';
 let messageEl, emailInput, passwordInput, promptInput, output, preview, authSection, appSection, planInfo, creditsInfo, generateButton;
 
+// URL dinâmica da API (funciona local e produção)
+const API_BASE_URL = window.location.origin;
+
 function initElements() {
   messageEl = document.getElementById('message');
   emailInput = document.getElementById('email');
@@ -56,7 +59,7 @@ async function register() {
   }
 
   try {
-    await fetch('http://localhost:3000/register', {
+    await fetch(`${API_BASE_URL}/register`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -79,7 +82,7 @@ async function login() {
   }
 
   try {
-    const res = await fetch('http://localhost:3000/login', {
+    const res = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -163,7 +166,7 @@ async function generate(event) {
   }
 
   try {
-    const res = await fetch('http://localhost:3000/generate', {
+    const res = await fetch(`${API_BASE_URL}/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -200,7 +203,7 @@ async function checkout(event) {
   }
 
   try {
-    const res = await fetch('http://localhost:3000/checkout', {
+    const res = await fetch(`${API_BASE_URL}/checkout`, {
       method: 'POST',
       headers: {
         'Authorization': token
@@ -240,7 +243,7 @@ async function setupApp() {
     token = savedToken;
     
     try {
-      const res = await fetch('http://localhost:3000/me', {
+      const res = await fetch(`${API_BASE_URL}/me`, {
         method: 'GET',
         headers: {
           'Authorization': token,
