@@ -102,10 +102,23 @@ self.addEventListener('fetch', (event) => {
         }).catch(() => {
           // Fallback para offline
           if (event.request.destination === 'document') {
-            return caches.match('/index.html');
+            return caches.match('/index.html').then((fallback) => {
+              if (fallback) return fallback;
+              // Retorna uma resposta HTML simples se não tivermos o index no cache
+              return new Response(`<html><body><h1>Offline</h1><p>Sem conexão e sem cache disponível.</p></body></html>`, {
+                headers: { 'Content-Type': 'text/html' },
+                status: 503
+              });
+            });
           }
-          // Para outros recursos, retorna erro
-          return new Response('Offline', { status: 503 });
+          // Para outros recursos, retorna um texto ou erro JSON dependendo do destino
+          if (event.request.destination === 'image') {
+            return new Response('Image unavailable', { status: 503 });
+          }
+          return new Response(JSON.stringify({ error: 'Offline' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          });
         });
       })
   );
