@@ -1,247 +1,280 @@
-let token = '';
-let messageEl, emailInput, passwordInput, promptInput, output, preview, authSection, appSection, planInfo, creditsInfo, generateButton;
+/**
+ * AI Code Builder - Client Side Logic
+ * Refactored for modularity, clean code, and Prism.js integration.
+ */
 
-console.log('Script carregado');
-
-// URL dinâmica da API (funciona local e produção)
+let token = localStorage.getItem('authToken') || '';
 let API_BASE_URL;
-if (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.port === '5500'
-) {
+
+// Identify API URL based on environment
+if (['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.port === '5500') {
   API_BASE_URL = 'http://localhost:3000';
 } else {
-  // Substitua pela URL real do backend no Render
   API_BASE_URL = 'https://iacode.onrender.com';
 }
 
-function initElements() {
-  console.log('Iniciando initElements');
-  messageEl = document.getElementById('message');
-  emailInput = document.getElementById('email');
-  passwordInput = document.getElementById('password');
-  promptInput = document.getElementById('prompt');
-  output = document.getElementById('output');
-  preview = document.getElementById('preview');
-  authSection = document.querySelector('.auth');
-  appSection = document.querySelector('.app');
-  planInfo = document.getElementById('planInfo');
-  creditsInfo = document.getElementById('creditsInfo');
-  generateButton = document.getElementById('generateButton');
-
-  // Novos elementos para formulários aprimorados
-  registerEmailInput = document.getElementById('registerEmail');
-  registerPasswordInput = document.getElementById('registerPassword');
-  confirmPasswordInput = document.getElementById('confirmPassword');
-  resetEmailInput = document.getElementById('resetEmail');
-  newPasswordInput = document.getElementById('newPassword');
-  confirmNewPasswordInput = document.getElementById('confirmNewPassword');
-
-  authTitle = document.getElementById('authTitle');
-  authSubtitle = document.getElementById('authSubtitle');
-  authForm = document.getElementById('authForm');
-  registerForm = document.getElementById('registerForm');
-  forgotPasswordForm = document.getElementById('forgotPasswordForm');
-  resetPasswordForm = document.getElementById('resetPasswordForm');
-
-  strengthBar = document.getElementById('strengthBar');
-  strengthText = document.getElementById('strengthText');
-  newStrengthBar = document.getElementById('newStrengthBar');
-  newStrengthText = document.getElementById('newStrengthText');
-
-  // Event listeners para validação em tempo real
-  if (registerPasswordInput) {
-    registerPasswordInput.addEventListener('input', () => checkPasswordStrength(registerPasswordInput.value, strengthBar, strengthText));
+// Elements Cache
+const elements = {
+  message: null,
+  authSection: null,
+  appSection: null,
+  prompt: null,
+  output: null,
+  preview: null,
+  planBadge: null,
+  creditsBadge: null,
+  generateBtn: null,
+  forms: {
+    auth: null,
+    register: null,
+    forgot: null,
+    reset: null
   }
-  if (newPasswordInput) {
-    newPasswordInput.addEventListener('input', () => checkPasswordStrength(newPasswordInput.value, newStrengthBar, newStrengthText));
-  }
+};
 
-  console.log('emailInput:', emailInput);
-  console.log('passwordInput:', passwordInput);
-  console.log('Elementos inicializados');
+/**
+ * Initialize DOM Elements
+ */
+function init() {
+  elements.message = document.getElementById('message');
+  elements.authSection = document.getElementById('authSection');
+  elements.appSection = document.getElementById('appSection');
+  elements.prompt = document.getElementById('prompt');
+  elements.output = document.getElementById('output');
+  elements.preview = document.getElementById('preview');
+  elements.planBadge = document.getElementById('planInfo');
+  elements.creditsBadge = document.getElementById('creditsInfo');
+  elements.generateBtn = document.getElementById('generateButton');
+
+  elements.forms.auth = document.getElementById('authForm');
+  elements.forms.register = document.getElementById('registerForm');
+  elements.forms.forgot = document.getElementById('forgotPasswordForm');
+  elements.forms.reset = document.getElementById('resetPasswordForm');
+
+  handleDeepLinks();
+  checkSession();
+  setupEventListeners();
 }
 
-function showMessage(msg, type = 'info') {
-  messageEl.textContent = msg;
-  messageEl.className = `message ${type}`;
+/**
+ * Event Listeners Setup
+ */
+function setupEventListeners() {
+  // Real-time password strength for registration
+  const regPass = document.getElementById('registerPassword');
+  if (regPass) {
+    regPass.addEventListener('input', (e) => {
+      updatePasswordStrength(e.target.value, 'strengthBar', 'strengthText');
+    });
+  }
 }
 
-function updateUserStatus(plan, credits) {
-  planInfo.textContent = `Plano: ${plan}`;
-  creditsInfo.textContent = `Gerações disponíveis: ${plan === 'pro' ? 'ilimitado' : credits}`;
+/**
+ * Global Message Handler
+ */
+function showStatus(msg, type = 'info') {
+  if (!elements.message) return;
+  elements.message.textContent = msg;
+  elements.message.className = `message ${type}`;
+  
+  if (type === 'success' || type === 'info') {
+    setTimeout(() => {
+      elements.message.classList.add('hidden');
+    }, 5000);
+  }
+}
 
-  if (plan === 'pro') {
-    generateButton.disabled = false;
+/**
+ * UI State Management
+ */
+function setButtonLoading(btn, isLoading, text = 'Carregando...') {
+  if (!btn) return;
+  if (isLoading) {
+    btn.dataset.originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳</span> ${text}`;
   } else {
-    generateButton.disabled = credits <= 0;
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.originalText || 'Enviar';
   }
 }
 
-function clearMessage() {
-  messageEl.textContent = '';
-  messageEl.className = 'message hidden';
+/**
+ * Auth Session Check
+ */
+async function checkSession() {
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      onLoginSuccess(data);
+    } else {
+      logout();
+    }
+  } catch (err) {
+    console.error('Session check failed', err);
+  }
 }
 
-function setLoading(button, state) {
-  if (!button) return;
-  if (state) {
-    button.dataset.original = button.textContent;
-    button.disabled = true;
-    button.textContent = 'Carregando...';
-  } else {
-    button.disabled = false;
-    button.textContent = button.dataset.original || 'Enviar';
+/**
+ * Handle URL Search Params (Password Reset)
+ */
+function handleDeepLinks() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get('token');
+
+  if (resetToken) {
+    showForm('reset');
+  }
+}
+
+/**
+ * Authentication Actions
+ */
+async function login() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.querySelector('#authForm .primary');
+
+  if (!email || !password) return showStatus('Por favor, preencha todos os campos', 'error');
+
+  setButtonLoading(btn, true, 'Entrando...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.token) {
+      token = data.token;
+      localStorage.setItem('authToken', token);
+      onLoginSuccess(data);
+      showStatus('Bem-vindo de volta!', 'success');
+    } else {
+      showStatus(data.error || 'Credenciais inválidas', 'error');
+    }
+  } catch (err) {
+    showStatus('Erro de conexão', 'error');
+  } finally {
+    setButtonLoading(btn, false);
   }
 }
 
 async function register() {
-  console.log('Função register chamada');
-  clearMessage();
+  const email = document.getElementById('registerEmail').value.trim();
+  const password = document.getElementById('registerPassword').value;
+  const confirm = document.getElementById('confirmPassword').value;
+  const btn = document.querySelector('#registerForm .primary');
 
-  // Detectar se estamos no modo de cadastro ou login
-  const isRegisterMode = !registerForm.classList.contains('hidden');
-  console.log('Modo registro:', isRegisterMode);
-
-  const email = isRegisterMode ? registerEmailInput.value.trim() : emailInput.value.trim();
-  const password = isRegisterMode ? registerPasswordInput.value : passwordInput.value;
-  const confirmPassword = isRegisterMode ? confirmPasswordInput.value : null;
-
-  console.log('Email:', email, 'Password length:', password.length);
-
-  if (!email || !password) {
-    return showMessage('Preencha email e senha', 'error');
-  }
-
-  if (isRegisterMode && !confirmPassword) {
-    return showMessage('Confirme sua senha', 'error');
-  }
-
-  if (isRegisterMode && password !== confirmPassword) {
-    return showMessage('As senhas não coincidem', 'error');
-  }
-
-  if (password.length < 6) {
-    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
-  }
-
-  // Validação básica de email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return showMessage('Digite um email válido', 'error');
-  }
-
+  if (password !== confirm) return showStatus('As senhas não coincidem', 'error');
+  
+  setButtonLoading(btn, true, 'Criando conta...');
   try {
-    const response = await fetch(`${API_BASE_URL}/register`, {
+    const res = await fetch(`${API_BASE_URL}/register`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        email: email,
-        password: password
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
     });
 
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      // Se não conseguir fazer parse do JSON, cria um objeto de erro
-      data = { error: `Erro do servidor (${response.status})` };
-    }
-
-    console.log('Register data:', data);
-    if (response.ok) {
-      showMessage('Conta criada com sucesso! Agora faça login.', 'success');
-      // Limpar campos após sucesso
-      if (isRegisterMode) {
-        registerEmailInput.value = '';
-        registerPasswordInput.value = '';
-        confirmPasswordInput.value = '';
-        // Voltar para login
-        setTimeout(() => toggleAuthMode(), 2000);
-      } else {
-        emailInput.value = '';
-        passwordInput.value = '';
-      }
+    const data = await res.json();
+    if (res.ok) {
+      showStatus('Conta criada! Por favor, faça login.', 'success');
+      setTimeout(() => showForm('auth'), 2000);
     } else {
-      // Mostrar mensagem específica do erro
-      showMessage(data.error || `Erro ${response.status}: ${response.statusText}`, 'error');
+      showStatus(data.error || 'Falha no cadastro', 'error');
     }
-  } catch (error) {
-    console.error('Erro na requisição:', error);
-    showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error');
+  } catch (err) {
+    showStatus('Erro de conexão', 'error');
+  } finally {
+    setButtonLoading(btn, false);
   }
 }
 
-async function login() {
-  console.log('Função login chamada');
-  console.log('emailInput.value:', emailInput ? emailInput.value : 'null');
-  console.log('passwordInput.value:', passwordInput ? passwordInput.value : 'null');
-  clearMessage();
-
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
-
-  console.log('Email:', email, 'Password length:', password.length);
-
-  if (!email || !password) {
-    return showMessage('Preencha email e senha', 'error');
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return showMessage('Digite um email válido', 'error');
-  }
-
-  try {
-    console.log('Fazendo fetch para login:', `${API_BASE_URL}/login`);
-    const response = await fetch(`${API_BASE_URL}/login`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        email: email,
-        password: password
-      })
-    });
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      data = { error: `Erro do servidor (${response.status})` };
-    }
-
-    console.log('Login response:', response.status, data);
-    if (response.ok && data.token) {
-      token = data.token;
-      localStorage.setItem('authToken', token);
-      authSection.classList.add('hidden');
-      appSection.classList.remove('hidden');
-      updateUserStatus(data.plan, data.credits);
-      showMessage('Login realizado com sucesso!', 'success');
-
-      // Limpar campos após login bem-sucedido
-      emailInput.value = '';
-      passwordInput.value = '';
-    } else {
-      showMessage(data.error || 'Login inválido. Verifique seus dados.', 'error');
-    }
-  } catch (error) {
-    console.error('Erro na requisição:', error);
-    showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error');
-  }
+function onLoginSuccess(userData) {
+  console.log('Login bem-sucedido, ocultando formulário...');
+  if (elements.authSection) elements.authSection.classList.add('hidden');
+  if (elements.appSection) elements.appSection.classList.remove('hidden');
+  updateUserStats(userData.plan, userData.credits);
 }
 
 function logout() {
   token = '';
   localStorage.removeItem('authToken');
-  authSection.classList.remove('hidden');
-  appSection.classList.add('hidden');
-  showMessage('Você saiu do sistema.', 'info');
+  if (elements.authSection) elements.authSection.classList.remove('hidden');
+  if (elements.appSection) elements.appSection.classList.add('hidden');
+  showStatus('Sessão encerrada com sucesso', 'info');
 }
 
-function extractCodeBlocks(text) {
+/**
+ * App Logic
+ */
+async function generate(e) {
+  const prompt = elements.prompt.value.trim();
+  if (!prompt) return showStatus('Por favor, descreva o que você quer construir', 'error');
+
+  setButtonLoading(elements.generateBtn, true, 'Gerando Código...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ prompt })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      displayGeneratedCode(data.code);
+      updateUserStats(data.plan, data.credits);
+      showStatus('Componente gerado com sucesso!', 'success');
+    } else {
+      showStatus(data.error || 'Falha na geração', 'error');
+    }
+  } catch (err) {
+    showStatus('Falha na geração. Verifique a conexão com o servidor.', 'error');
+  } finally {
+    setButtonLoading(elements.generateBtn, false);
+  }
+}
+
+function displayGeneratedCode(rawCode) {
+  // Update output text with Prism highlighting
+  elements.output.textContent = rawCode;
+  Prism.highlightElement(elements.output);
+
+  // Update preview iFrame
+  elements.preview.srcdoc = buildPreview(rawCode);
+}
+
+function buildPreview(rawCode) {
+  const { html, css, js } = extractCode(rawCode);
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: sans-serif; padding: 20px; }
+          ${css}
+        </style>
+      </head>
+      <body>
+        ${html || '<div style="color: #666; text-align: center; margin-top: 100px;">Gerando visualização...</div>'}
+        <script>${js}<\/script>
+      </body>
+    </html>
+  `;
+}
+
+function extractCode(text) {
   const blocks = { html: '', css: '', js: '' };
   const fenceRegex = /```(?:([a-zA-Z0-9]+)\n)?([\s\S]*?)```/g;
   let match;
@@ -250,615 +283,136 @@ function extractCodeBlocks(text) {
     const lang = (match[1] || '').toLowerCase();
     const code = match[2].trim();
 
-    if (lang.includes('html') && !blocks.html) {
-      blocks.html = code;
-    } else if (lang.includes('css') && !blocks.css) {
-      blocks.css = code;
-    } else if ((lang.includes('js') || lang.includes('javascript')) && !blocks.js) {
-      blocks.js = code;
-    } else if (!lang && !blocks.html && code.includes('<')) {
-      blocks.html = code;
-    }
+    if (lang.includes('html')) blocks.html += code + '\n';
+    else if (lang.includes('css')) blocks.css += code + '\n';
+    else if (lang.includes('js') || lang.includes('javascript')) blocks.js += code + '\n';
+    else if (!lang && code.includes('<')) blocks.html += code + '\n';
+  }
+
+  // Fallback if no markdown fences found
+  if (!blocks.html && !blocks.css && !blocks.js) {
+    blocks.html = text;
   }
 
   return blocks;
 }
 
-function buildPreviewDoc(text) {
-  const { html, css, js } = extractCodeBlocks(text);
-
-  if (!html && !css && !js) {
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;padding:24px;}</style></head><body><div>Preview indisponível para este conteúdo. Copie o código gerado e use em seus arquivos HTML/CSS/JS.</div></body></html>`;
-  }
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${css || ''}</style></head><body>${html || ''}<script>${js || ''}<!-- --></script></body></html>`;
+/**
+ * Utility Functions
+ */
+function updateUserStats(plan, credits) {
+  elements.planBadge.textContent = `Plano: ${plan.toUpperCase()}`;
+  elements.creditsBadge.textContent = plan === 'pro' ? 'Créditos Ilimitados' : `Créditos: ${credits}`;
+  elements.generateBtn.disabled = plan !== 'pro' && credits <= 0;
 }
 
-async function generate(event) {
-  clearMessage();
+function showForm(type) {
+  Object.values(elements.forms).forEach(form => form?.classList.add('hidden'));
+  elements.forms[type]?.classList.remove('hidden');
 
-  const btn = event?.target;
-  setLoading(btn, true);
+  const title = document.getElementById('authTitle');
+  const subtitle = document.getElementById('authSubtitle');
 
-  if (!promptInput.value) {
-    setLoading(btn, false);
-    return showMessage('Digite um prompt para continuar.', 'error');
+  switch(type) {
+    case 'auth':
+      title.textContent = 'Acesse sua conta';
+      subtitle.textContent = 'Entre para começar a criar.';
+      break;
+    case 'register':
+      title.textContent = 'Criar Conta';
+      subtitle.textContent = 'Junte-se ao futuro do desenvolvimento UI.';
+      break;
+    case 'forgot':
+      title.textContent = 'Recuperar Acesso';
+      subtitle.textContent = 'Enviaremos um link de recuperação.';
+      break;
+    case 'reset':
+      title.textContent = 'Nova Senha';
+      subtitle.textContent = 'Proteja sua conta.';
+      break;
   }
-
-  if (!token) {
-    setLoading(btn, false);
-    return showMessage('Faça login antes de gerar o código.', 'error');
-  }
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token
-      },
-      body: JSON.stringify({ prompt: promptInput.value })
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      showMessage(data.error, 'error');
-    } else {
-      output.textContent = data.code;
-      preview.srcdoc = buildPreviewDoc(data.code);
-      updateUserStatus(data.plan, data.credits);
-      showMessage('Código gerado com sucesso!', 'success');
-    }
-  } catch {
-    showMessage('Erro ao gerar código. Verifique o servidor.', 'error');
-  }
-
-  setLoading(btn, false);
 }
-
-async function checkout(event) {
-  clearMessage();
-  const btn = event?.target;
-  setLoading(btn, true);
-
-  if (!token) {
-    setLoading(btn, false);
-    return showMessage('Faça login antes de fazer upgrade.', 'error');
-  }
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/checkout`, {
-      method: 'POST',
-      headers: {
-        'Authorization': token
-      }
-    });
-
-    const data = await res.json();
-    if (data.url) {
-      showMessage('Redirecionando para o pagamento...', 'info');
-      window.location.href = data.url;
-    } else {
-      showMessage('Erro ao iniciar o pagamento.', 'error');
-    }
-  } catch {
-    showMessage('Erro ao iniciar o pagamento. Tente novamente.', 'error');
-  }
-
-  setLoading(btn, false);
-}
-
-function copyCode() {
-  if (!output.textContent.trim()) {
-    return showMessage('Não há código para copiar.', 'error');
-  }
-
-  navigator.clipboard.writeText(output.textContent)
-    .then(() => showMessage('Código copiado para a área de transferência.', 'success'))
-    .catch(() => showMessage('Não foi possível copiar o código.', 'error'));
-}
-
-
-// ===== NOVO FLUXO DE AUTENTICAÇÃO =====
 
 function toggleAuthMode() {
-  // Alterna entre login e cadastro
-  const isRegister = !registerForm.classList.contains('hidden');
-  if (isRegister) {
-    authTitle.textContent = 'Entrar na sua conta';
-    authSubtitle.textContent = 'Use seu email para acessar o gerador de componentes.';
-    authForm.classList.remove('hidden');
-    registerForm.classList.add('hidden');
-    forgotPasswordForm.classList.add('hidden');
-    resetPasswordForm.classList.add('hidden');
-  } else {
-    authTitle.textContent = 'Criar nova conta';
-    authSubtitle.textContent = 'Preencha os dados abaixo para criar sua conta.';
-    authForm.classList.add('hidden');
-    registerForm.classList.remove('hidden');
-    forgotPasswordForm.classList.add('hidden');
-    resetPasswordForm.classList.add('hidden');
-  }
+  const isLoginVisible = !elements.forms.auth.classList.contains('hidden');
+  showForm(isLoginVisible ? 'register' : 'auth');
 }
 
-function showForgotPassword() {
-  authTitle.textContent = 'Esqueci minha senha';
-  authSubtitle.textContent = 'Digite seu email para receber instruções de redefinição.';
-  authForm.classList.add('hidden');
-  registerForm.classList.add('hidden');
-  forgotPasswordForm.classList.remove('hidden');
-  resetPasswordForm.classList.add('hidden');
+function showForgotPassword() { showForm('forgot'); }
+function showLoginForm() { showForm('auth'); }
+
+function copyCode() {
+  const code = elements.output.textContent;
+  if (!code) return;
+
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => btn.textContent = originalText, 2000);
+  });
 }
 
-function showLoginForm() {
-  authTitle.textContent = 'Entrar na sua conta';
-  authSubtitle.textContent = 'Use seu email para acessar o gerador de componentes.';
-  authForm.classList.remove('hidden');
-  registerForm.classList.add('hidden');
-  forgotPasswordForm.classList.add('hidden');
-  resetPasswordForm.classList.add('hidden');
-}
-
-async function handleRegister(e) {
-  e?.preventDefault();
-  clearMessage();
-  setLoading(e?.target, true);
-  const email = registerEmailInput.value.trim();
-  const password = registerPasswordInput.value;
-  const confirmPassword = confirmPasswordInput.value;
-  console.log('[Cadastro] Email:', email, '| Password length:', password.length, '| Confirm:', confirmPassword);
-  if (!email || !password || !confirmPassword) {
-    setLoading(e?.target, false);
-    console.error('[Cadastro] Campos obrigatórios não preenchidos');
-    return showMessage('Preencha todos os campos', 'error');
-  }
-  if (password !== confirmPassword) {
-    setLoading(e?.target, false);
-    console.error('[Cadastro] Senhas não coincidem');
-    return showMessage('As senhas não coincidem', 'error');
-  }
-  if (password.length < 6) {
-    setLoading(e?.target, false);
-    console.error('[Cadastro] Senha muito curta');
-    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    setLoading(e?.target, false);
-    console.error('[Cadastro] Email inválido');
-    return showMessage('Digite um email válido', 'error');
-  }
-  try {
-    console.log('[Cadastro] Enviando requisição para', `${API_BASE_URL}/register`);
-    const response = await fetch(`${API_BASE_URL}/register`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json().catch(() => ({}));
-    setLoading(e?.target, false);
-    console.log('[Cadastro] Status:', response.status, '| Resposta:', data);
-    if (response.ok) {
-      showMessage('Conta criada com sucesso! Agora faça login.', 'success');
-      registerEmailInput.value = '';
-      registerPasswordInput.value = '';
-      confirmPasswordInput.value = '';
-      setTimeout(() => toggleAuthMode(), 2000);
-    } else {
-      console.error('[Cadastro] Erro:', data.error || 'Erro ao criar conta');
-      showMessage(data.error || 'Erro ao criar conta', 'error');
-    }
-  } catch (err) {
-    setLoading(e?.target, false);
-    console.error('[Cadastro] Erro de conexão:', err);
-    showMessage('Erro de conexão. Tente novamente.', 'error');
-  }
-}
-
-async function handleLogin(e) {
-  e?.preventDefault();
-  clearMessage();
-  setLoading(e?.target, true);
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
-  if (!email || !password) {
-    setLoading(e?.target, false);
-    return showMessage('Preencha email e senha', 'error');
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    setLoading(e?.target, false);
-    return showMessage('Digite um email válido', 'error');
-  }
-  try {
-    const response = await fetch(`${API_BASE_URL}/login`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json().catch(() => ({}));
-    setLoading(e?.target, false);
-    if (response.ok && data.token) {
-      token = data.token;
-      localStorage.setItem('authToken', token);
-      authSection.classList.add('hidden');
-      appSection.classList.remove('hidden');
-      updateUserStatus(data.plan, data.credits);
-      showMessage('Login realizado com sucesso!', 'success');
-      emailInput.value = '';
-      passwordInput.value = '';
-    } else {
-      showMessage(data.error || 'Login inválido. Verifique seus dados.', 'error');
-    }
-  } catch (err) {
-    setLoading(e?.target, false);
-    showMessage('Erro de conexão. Tente novamente.', 'error');
-  }
-}
-
-async function handleRequestPasswordReset(e) {
-  e?.preventDefault();
-  clearMessage();
-  setLoading(e?.target, true);
-  const email = resetEmailInput.value.trim();
-  if (!email) {
-    setLoading(e?.target, false);
-    return showMessage('Digite seu email', 'error');
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    setLoading(e?.target, false);
-    return showMessage('Digite um email válido', 'error');
-  }
-  try {
-    const response = await fetch(`${API_BASE_URL}/forgot-password`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email })
-    });
-    const data = await response.json().catch(() => ({}));
-    setLoading(e?.target, false);
-    if (response.ok) {
-      showMessage('Link de redefinição enviado! Verifique seu email.', 'success');
-      resetEmailInput.value = '';
-    } else {
-      showMessage(data.error || 'Erro ao enviar link de redefinição', 'error');
-    }
-  } catch (err) {
-    setLoading(e?.target, false);
-    showMessage('Erro de conexão. Tente novamente.', 'error');
-  }
-}
-
-async function handleResetPassword(e) {
-  e?.preventDefault();
-  clearMessage();
-  setLoading(e?.target, true);
-  const password = newPasswordInput.value;
-  const confirmPassword = confirmNewPasswordInput.value;
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-  if (!token) {
-    setLoading(e?.target, false);
-    return showMessage('Link de redefinição inválido', 'error');
-  }
-  if (!password || !confirmPassword) {
-    setLoading(e?.target, false);
-    return showMessage('Preencha todos os campos', 'error');
-  }
-  if (password !== confirmPassword) {
-    setLoading(e?.target, false);
-    return showMessage('As senhas não coincidem', 'error');
-  }
-  if (password.length < 6) {
-    setLoading(e?.target, false);
-    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
-  }
-  try {
-    const response = await fetch(`${API_BASE_URL}/reset-password`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ token, password })
-    });
-    const data = await response.json().catch(() => ({}));
-    setLoading(e?.target, false);
-    if (response.ok) {
-      showMessage('Senha redefinida com sucesso! Faça login.', 'success');
-      newPasswordInput.value = '';
-      confirmNewPasswordInput.value = '';
-      setTimeout(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        showLoginForm();
-      }, 2000);
-    } else {
-      showMessage(data.error || 'Erro ao redefinir senha', 'error');
-    }
-  } catch (err) {
-    setLoading(e?.target, false);
-    showMessage('Erro de conexão. Tente novamente.', 'error');
-  }
-}
-
-// Inicialização dos eventos dos botões
-window.addEventListener('DOMContentLoaded', () => {
-  initElements();
-  // Botões principais
-  const registerBtn = document.querySelector('#registerForm .primary');
-  if (registerBtn) registerBtn.onclick = handleRegister;
-  const loginBtn = document.querySelector('#authForm .primary');
-  if (loginBtn) loginBtn.onclick = handleLogin;
-  const forgotBtn = document.querySelector('#forgotPasswordForm .primary');
-  if (forgotBtn) forgotBtn.onclick = handleRequestPasswordReset;
-  const resetBtn = document.querySelector('#resetPasswordForm .primary');
-  if (resetBtn) resetBtn.onclick = handleResetPassword;
-});
-
-function checkPasswordStrength(password, barElement, textElement) {
+function updatePasswordStrength(pass, barId, textId) {
+  const bar = document.getElementById(barId);
+  const text = document.getElementById(textId);
   let strength = 0;
-  let feedback = [];
 
-  if (password.length >= 6) strength++;
-  if (password.length >= 8) strength++;
-  if (/[a-z]/.test(password)) strength++;
-  if (/[A-Z]/.test(password)) strength++;
-  if (/[0-9]/.test(password)) strength++;
-  if (/[^A-Za-z0-9]/.test(password)) strength++;
+  if (pass.length > 5) strength++;
+  if (pass.length > 10) strength++;
+  if (/[A-Z]/.test(pass)) strength++;
+  if (/[0-9]/.test(pass)) strength++;
+  if (/[^A-Za-z0-9]/.test(pass)) strength++;
 
-  barElement.className = 'strength-bar';
-
-  if (strength <= 2) {
-    barElement.classList.add('strength-weak');
-    textElement.textContent = 'Fraca';
-    textElement.style.color = '#ef4444';
-  } else if (strength <= 4) {
-    barElement.classList.add('strength-medium');
-    textElement.textContent = 'Média';
-    textElement.style.color = '#f59e0b';
+  bar.className = 'strength-bar';
+  if (strength < 2) {
+    bar.classList.add('strength-weak');
+    text.textContent = 'Fraca';
+  } else if (strength < 4) {
+    bar.classList.add('strength-medium');
+    text.textContent = 'Média';
   } else {
-    barElement.classList.add('strength-strong');
-    textElement.textContent = 'Forte';
-    textElement.style.color = '#10b981';
-  }
-}
-
-async function register() {
-  clearMessage();
-
-  const email = registerEmailInput.value.trim();
-  const password = registerPasswordInput.value;
-  const confirmPassword = confirmPasswordInput.value;
-
-  if (!email || !password || !confirmPassword) {
-    return showMessage('Preencha todos os campos', 'error');
-  }
-
-  if (password !== confirmPassword) {
-    return showMessage('As senhas não coincidem', 'error');
-  }
-
-  if (password.length < 6) {
-    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
-  }
-
-  // Validação básica de email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return showMessage('Digite um email válido', 'error');
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/register`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        email: email,
-        password: password
-      })
-    });
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      data = { error: `Erro do servidor (${response.status})` };
-    }
-
-    if (response.ok) {
-      showMessage('Conta criada com sucesso! Agora faça login.', 'success');
-      // Limpar campos após sucesso
-      registerEmailInput.value = '';
-      registerPasswordInput.value = '';
-      confirmPasswordInput.value = '';
-      // Voltar para login
-      setTimeout(() => toggleAuthMode(), 2000);
-    } else {
-      showMessage(data.error || `Erro ${response.status}: ${response.statusText}`, 'error');
-    }
-  } catch (error) {
-    console.error('Erro na requisição:', error);
-    showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error');
+    bar.classList.add('strength-strong');
+    text.textContent = 'Forte';
   }
 }
 
 async function requestPasswordReset() {
-  clearMessage();
-
-  const email = resetEmailInput.value.trim();
-
-  if (!email) {
-    return showMessage('Digite seu email', 'error');
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return showMessage('Digite um email válido', 'error');
-  }
-
+  const email = document.getElementById('resetEmail').value.trim();
+  const btn = document.querySelector('#forgotPasswordForm .primary');
+  
+  setButtonLoading(btn, true);
   try {
-    const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+    const res = await fetch(`${API_BASE_URL}/forgot-password`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      data = { error: `Erro do servidor (${response.status})` };
-    }
-
-    if (response.ok) {
-      showMessage('Link de redefinição enviado! Verifique seu email.', 'success');
-      resetEmailInput.value = '';
-    } else {
-      showMessage(data.error || 'Erro ao enviar link de redefinição', 'error');
-    }
-  } catch (error) {
-    console.error('Erro na requisição:', error);
-    showMessage('Erro de conexão. Tente novamente.', 'error');
-  }
+    if (res.ok) showStatus('Link de recuperação enviado!', 'success');
+    else showStatus('Erro ao enviar link', 'error');
+  } catch (err) { showStatus('Erro de conexão', 'error'); }
+  finally { setButtonLoading(btn, false); }
 }
 
-async function resetPassword() {
-  clearMessage();
-
-  const password = newPasswordInput.value;
-  const confirmPassword = confirmNewPasswordInput.value;
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-
-  if (!token) {
-    return showMessage('Link de redefinição inválido', 'error');
-  }
-
-  if (!password || !confirmPassword) {
-    return showMessage('Preencha todos os campos', 'error');
-  }
-
-  if (password !== confirmPassword) {
-    return showMessage('As senhas não coincidem', 'error');
-  }
-
-  if (password.length < 6) {
-    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/reset-password`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        token: token,
-        password: password
-      })
-    });
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      data = { error: `Erro do servidor (${response.status})` };
-    }
-
-    if (response.ok) {
-      showMessage('Senha redefinida com sucesso! Faça login.', 'success');
-      // Limpar campos e voltar para login
-      newPasswordInput.value = '';
-      confirmNewPasswordInput.value = '';
-      setTimeout(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        showLoginForm();
-      }, 2000);
-    } else {
-      showMessage(data.error || 'Erro ao redefinir senha', 'error');
-    }
-  } catch (error) {
-    console.error('Erro na requisição:', error);
-    showMessage('Erro de conexão. Tente novamente.', 'error');
-  }
-}
-
-async function setupApp() {
-  initElements();
-  console.log('setupApp chamado');
-
-  // Garantir estado inicial dos formulários
-  console.log('authForm:', authForm);
-  console.log('registerForm:', registerForm);
-  if (authForm) authForm.classList.remove('hidden');
-  if (registerForm) registerForm.classList.add('hidden');
-  if (forgotPasswordForm) forgotPasswordForm.classList.add('hidden');
-  if (resetPasswordForm) resetPasswordForm.classList.add('hidden');
-  console.log('Formulários resetados');
-
-  // Verificar se há token de redefinição de senha na URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const resetToken = urlParams.get('token');
-
-  if (resetToken) {
-    console.log('Token de redefinição encontrado, mostrando formulário...');
-    authTitle.textContent = 'Redefinir senha';
-    authSubtitle.textContent = 'Digite sua nova senha.';
-    authForm.classList.add('hidden');
-    registerForm.classList.add('hidden');
-    forgotPasswordForm.classList.add('hidden');
-    resetPasswordForm.classList.remove('hidden');
-    return; // Não continua com o fluxo normal
-  }
+async function checkout() {
+  if (!token) return showStatus('Login necessário', 'error');
   
-  const savedToken = localStorage.getItem('authToken');
-  if (savedToken) {
-    console.log('Token encontrado no localStorage, restaurando sessão...');
-    token = savedToken;
-    
-    try {
-      const res = await fetch(`${API_BASE_URL}/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        console.log('Sessão restaurada:', data.email);
-        authSection.classList.add('hidden');
-        appSection.classList.remove('hidden');
-        updateUserStatus(data.plan, data.credits);
-      } else {
-        console.log('Token inválido, limpando...');
-        localStorage.removeItem('authToken');
-        token = '';
-      }
-    } catch (error) {
-      console.error('Erro ao restaurar sessão:', error);
-      localStorage.removeItem('authToken');
-      token = '';
-    }
-  }
+  try {
+    const res = await fetch(`${API_BASE_URL}/checkout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+  } catch { showStatus('Erro no Stripe', 'error'); }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupApp);
-} else {
-  setupApp();
-}
+// Initial Boot
+document.addEventListener('DOMContentLoaded', init);
 
-// ===== REGISTRO PWA =====
-console.log('toggleAuthMode defined:', typeof toggleAuthMode);
-console.log('register defined:', typeof register);
-console.log('login defined:', typeof login);
+// PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then((registration) => {
-        console.log('Service Worker registrado com sucesso:', registration.scope);
-      })
-      .catch((error) => {
-        console.log('Falha ao registrar Service Worker:', error);
-      });
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed', err));
   });
 }

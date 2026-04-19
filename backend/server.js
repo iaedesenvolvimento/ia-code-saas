@@ -293,7 +293,14 @@ app.post('/generate', auth, async (req, res) => {
   const ai = await openai.chat.completions.create({
     model: 'openai/gpt-4o-mini',
     messages: [
-      { role: 'system', content: 'Gere HTML, CSS e JS moderno.' },
+      { 
+        role: 'system', 
+        content: `Você é um desenvolvedor frontend especialista em UI/UX. 
+        Gere componentes modernos, responsivos e visualmente atraentes. 
+        Sempre retorne o código dividido em blocos de markdown: \`\`\`html\`, \`\`\`css\` e \`\`\`javascript\`.
+        Use cores modernas, fontes elegantes e boas práticas de acessibilidade. 
+        Não inclua textos explicativos longos antes ou depois do código, foque no snippet.` 
+      },
       { role: 'user', content: prompt }
     ]
   });

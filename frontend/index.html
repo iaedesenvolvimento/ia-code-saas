@@ -3,17 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Code Builder</title>
+  <title>AI Code Builder | Craft Premium Components</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Prism.js for Syntax Highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
 
   <!-- PWA Meta Tags -->
-  <meta name="description" content="Gere componentes HTML/CSS/JS com IA">
+  <meta name="description" content="Gere componentes HTML/CSS/JS premium com Inteligência Artificial.">
   <meta name="theme-color" content="#6366f1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AI Code">
-  <meta name="mobile-web-app-capable" content="yes">
-
-  <!-- PWA Links -->
+  
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="icon-192.svg" sizes="192x192">
   <link rel="apple-touch-icon" href="icon-192.svg">
@@ -23,144 +28,94 @@
 <body>
   <div class="container">
     <header class="header">
-      <div>
-        <span class="eyebrow">AI Code Builder</span>
-        <h1>🚀 Gere componentes e trechos de código com IA</h1>
-        <p>Faça login, descreva o que precisa e receba trechos de HTML, CSS e JS prontos para usar.</p>
-      </div>
+      <h1>AI Code Builder</h1>
+      <p>Desenvolva componentes UI em segundos.</p>
     </header>
 
     <div id="message" class="message hidden"></div>
 
-    <section class="card auth">
-      <div class="section-header">
-        <h2 id="authTitle">Entrar na sua conta</h2>
-        <p id="authSubtitle">Use seu email para acessar o gerador de componentes.</p>
-      </div>
-
+    <!-- Seção de Autenticação -->
+    <section id="authSection" class="card auth">
       <div id="authForm">
-        <input id="email" type="email" placeholder="Digite seu email" required>
-        <input id="password" type="password" placeholder="Digite sua senha (mín. 6 caracteres)" required minlength="6">
-
-        <div class="form-options">
-          <label class="checkbox-label">
-            <input type="checkbox" id="rememberMe">
-            <span class="checkmark"></span>
-            Lembrar de mim
-          </label>
-          <button type="button" class="link-button" onclick="showForgotPassword()">Esqueci minha senha</button>
-        </div>
-
+        <input id="email" type="email" placeholder="Seu email" required>
+        <input id="password" type="password" placeholder="Sua senha" required minlength="6">
         <div class="button-row">
-          <button type="button" class="secondary" onclick="toggleAuthMode()">Criar conta</button>
           <button type="button" class="primary" onclick="login()">Entrar</button>
+          <button type="button" class="secondary" onclick="toggleAuthMode()">Criar conta</button>
         </div>
+        <button type="button" class="link-button" onclick="showForgotPassword()" style="margin-top: 15px; width: 100%;">Esqueci minha senha</button>
       </div>
 
       <div id="registerForm" class="hidden">
-        <input id="registerEmail" type="email" placeholder="Digite seu email" required>
-        <input id="registerPassword" type="password" placeholder="Crie uma senha (mín. 6 caracteres)" required minlength="6">
-        <input id="confirmPassword" type="password" placeholder="Confirme sua senha" required minlength="6">
-
-        <div class="password-strength">
-          <div class="strength-meter">
-            <div class="strength-bar" id="strengthBar"></div>
-          </div>
-          <span id="strengthText">Força da senha</span>
-        </div>
-
+        <input id="registerEmail" type="email" placeholder="Email" required>
+        <input id="registerPassword" type="password" placeholder="Senha" required minlength="6">
+        <input id="confirmPassword" type="password" placeholder="Confirmar" required minlength="6">
         <div class="button-row">
-          <button type="button" class="secondary" onclick="toggleAuthMode()">Voltar ao login</button>
-          <button type="button" class="primary" onclick="register()">Criar conta</button>
+          <button type="button" class="primary" onclick="register()">Cadastrar</button>
+          <button type="button" class="secondary" onclick="toggleAuthMode()">Voltar</button>
         </div>
       </div>
 
       <div id="forgotPasswordForm" class="hidden">
-        <p class="form-description">Digite seu email para receber um link de redefinição de senha.</p>
-        <input id="resetEmail" type="email" placeholder="Digite seu email cadastrado" required>
-
+        <input id="resetEmail" type="email" placeholder="Seu email" required>
         <div class="button-row">
+          <button type="button" class="primary" onclick="requestPasswordReset()">Recuperar</button>
           <button type="button" class="secondary" onclick="showLoginForm()">Voltar</button>
-          <button type="button" class="primary" onclick="requestPasswordReset()">Enviar link</button>
         </div>
       </div>
 
       <div id="resetPasswordForm" class="hidden">
-        <p class="form-description">Digite sua nova senha.</p>
-        <input id="newPassword" type="password" placeholder="Nova senha (mín. 6 caracteres)" required minlength="6">
-        <input id="confirmNewPassword" type="password" placeholder="Confirme a nova senha" required minlength="6">
-
-        <div class="password-strength">
-          <div class="strength-meter">
-            <div class="strength-bar" id="newStrengthBar"></div>
-          </div>
-          <span id="newStrengthText">Força da senha</span>
-        </div>
-
+        <input id="newPassword" type="password" placeholder="Nova senha" required minlength="6">
+        <input id="confirmNewPassword" type="password" placeholder="Confirmar" required minlength="6">
         <div class="button-row">
+          <button type="button" class="primary" onclick="resetPassword()">Salvar</button>
           <button type="button" class="secondary" onclick="showLoginForm()">Cancelar</button>
-          <button type="button" class="primary" onclick="resetPassword()">Redefinir senha</button>
         </div>
       </div>
-
-      <p class="note">Usuários free têm 3 gerações grátis. Faça upgrade para usar sem limites.</p>
     </section>
 
-    <section class="card app hidden">
+    <!-- Seção da Aplicação -->
+    <section id="appSection" class="card app hidden">
       <div class="app-header">
-        <div>
-          <p class="section-label">Seu espaço AI</p>
-          <h2>Gere componentes e trechos de código</h2>
-          <p>Descreva o elemento que precisa e receba um snippet pronto para usar.</p>
+        <div class="status-row">
+          <span id="planInfo" class="status-badge">Plano Free</span>
+          <span id="creditsInfo" class="status-badge">3 Créditos</span>
         </div>
         <div class="app-actions">
-          <button type="button" class="secondary small" onclick="checkout(event)">💎 Upgrade Pro</button>
+          <button type="button" class="primary small" onclick="checkout(event)">✨ Pro</button>
           <button type="button" class="secondary small" onclick="logout()">Sair</button>
         </div>
       </div>
 
-      <div class="status-row">
-        <span id="planInfo">Plano: free</span>
-        <span id="creditsInfo">Gerações disponíveis: 3</span>
-      </div>
-
-      <div class="help-box">
-        <strong>Como usar</strong>
-        <ol>
-          <li>1. Faça login ou crie uma conta.</li>
-          <li>2. Descreva o componente ou trecho de código desejado.</li>
-          <li>3. Clique em Gerar Código.</li>
-          <li>4. Veja o preview e copie o resultado.</li>
-        </ol>
-      </div>
-
-      <div class="panel">
-        <label for="prompt">O que você quer gerar?</label>
-        <textarea id="prompt" placeholder="Ex: Crie um card de produto com botão e efeito hover"></textarea>
-        <button id="generateButton" type="button" class="primary" onclick="generate(event)">⚡ Gerar Código</button>
-      </div>
-
-      <div class="results">
-        <div class="preview-box">
-          <div class="panel-title">
-            <h3>🔍 Preview</h3>
-            <span>Veja como ficará</span>
-          </div>
-          <iframe id="preview" title="Preview do código"></iframe>
+      <div class="main-workspace">
+        <div class="input-area">
+          <textarea id="prompt" placeholder="Descreva aqui o componente (ex: Card de produto, Botão animado...)"></textarea>
+          <button id="generateButton" type="button" class="primary" onclick="generate(event)">Gerar Código ⚡</button>
         </div>
 
-        <div class="code-box">
-          <div class="panel-title">
-            <h3>💻 Código</h3>
-            <span>Copie e use no seu projeto</span>
+        <div class="workspace-grid">
+          <div class="preview-panel">
+            <header>🔍 Preview</header>
+            <iframe id="preview"></iframe>
           </div>
-          <button type="button" class="secondary" onclick="copyCode()">📋 Copiar código</button>
-          <pre id="output">O código gerado aparecerá aqui.</pre>
+          <div class="code-panel">
+            <header>
+              💻 Código
+              <button onclick="copyCode()" class="link-button">📋 Copiar</button>
+            </header>
+            <pre><code id="output" class="language-html"></code></pre>
+          </div>
         </div>
       </div>
     </section>
   </div>
 
+  <!-- Prism.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+  
   <script src="script.js"></script>
 </body>
 </html>

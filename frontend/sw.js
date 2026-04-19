@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-code-v2';
+const CACHE_NAME = 'ai-code-v3';
 
 // Confirmação de versão do SW
 console.log('Service Worker v2 carregado');
