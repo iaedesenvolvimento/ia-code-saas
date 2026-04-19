@@ -4,9 +4,16 @@ let messageEl, emailInput, passwordInput, promptInput, output, preview, authSect
 console.log('Script carregado');
 
 // URL dinâmica da API (funciona local e produção)
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3000' 
-  : window.location.origin;
+let API_BASE_URL;
+if (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.port === '5500'
+) {
+  API_BASE_URL = 'http://localhost:3000';
+} else {
+  API_BASE_URL = window.location.origin;
+}
 
 function initElements() {
   console.log('Iniciando initElements');
@@ -351,29 +358,24 @@ function copyCode() {
     .catch(() => showMessage('Não foi possível copiar o código.', 'error'));
 }
 
-// ===== FUNÇÕES DE AUTENTICAÇÃO APRIMORADAS =====
+
+// ===== NOVO FLUXO DE AUTENTICAÇÃO =====
 
 function toggleAuthMode() {
-  console.log('toggleAuthMode chamado');
-  const isLoginMode = !registerForm.classList.contains('hidden');
-  console.log('isLoginMode:', isLoginMode);
-
-  if (isLoginMode) {
-    console.log('Mostrando formulário de cadastro');
-    // Mostrar formulário de cadastro
-    authTitle.textContent = 'Criar nova conta';
-    authSubtitle.textContent = 'Preencha os dados abaixo para criar sua conta.';
-    authForm.classList.add('hidden');
-    registerForm.classList.remove('hidden');
-    forgotPasswordForm.classList.add('hidden');
-    resetPasswordForm.classList.add('hidden');
-  } else {
-    console.log('Mostrando formulário de login');
-    // Mostrar formulário de login
+  // Alterna entre login e cadastro
+  const isRegister = !registerForm.classList.contains('hidden');
+  if (isRegister) {
     authTitle.textContent = 'Entrar na sua conta';
     authSubtitle.textContent = 'Use seu email para acessar o gerador de componentes.';
     authForm.classList.remove('hidden');
     registerForm.classList.add('hidden');
+    forgotPasswordForm.classList.add('hidden');
+    resetPasswordForm.classList.add('hidden');
+  } else {
+    authTitle.textContent = 'Criar nova conta';
+    authSubtitle.textContent = 'Preencha os dados abaixo para criar sua conta.';
+    authForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
     forgotPasswordForm.classList.add('hidden');
     resetPasswordForm.classList.add('hidden');
   }
@@ -396,6 +398,200 @@ function showLoginForm() {
   forgotPasswordForm.classList.add('hidden');
   resetPasswordForm.classList.add('hidden');
 }
+
+async function handleRegister(e) {
+  e?.preventDefault();
+  clearMessage();
+  setLoading(e?.target, true);
+  const email = registerEmailInput.value.trim();
+  const password = registerPasswordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
+  console.log('[Cadastro] Email:', email, '| Password length:', password.length, '| Confirm:', confirmPassword);
+  if (!email || !password || !confirmPassword) {
+    setLoading(e?.target, false);
+    console.error('[Cadastro] Campos obrigatórios não preenchidos');
+    return showMessage('Preencha todos os campos', 'error');
+  }
+  if (password !== confirmPassword) {
+    setLoading(e?.target, false);
+    console.error('[Cadastro] Senhas não coincidem');
+    return showMessage('As senhas não coincidem', 'error');
+  }
+  if (password.length < 6) {
+    setLoading(e?.target, false);
+    console.error('[Cadastro] Senha muito curta');
+    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    setLoading(e?.target, false);
+    console.error('[Cadastro] Email inválido');
+    return showMessage('Digite um email válido', 'error');
+  }
+  try {
+    console.log('[Cadastro] Enviando requisição para', `${API_BASE_URL}/register`);
+    const response = await fetch(`${API_BASE_URL}/register`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json().catch(() => ({}));
+    setLoading(e?.target, false);
+    console.log('[Cadastro] Status:', response.status, '| Resposta:', data);
+    if (response.ok) {
+      showMessage('Conta criada com sucesso! Agora faça login.', 'success');
+      registerEmailInput.value = '';
+      registerPasswordInput.value = '';
+      confirmPasswordInput.value = '';
+      setTimeout(() => toggleAuthMode(), 2000);
+    } else {
+      console.error('[Cadastro] Erro:', data.error || 'Erro ao criar conta');
+      showMessage(data.error || 'Erro ao criar conta', 'error');
+    }
+  } catch (err) {
+    setLoading(e?.target, false);
+    console.error('[Cadastro] Erro de conexão:', err);
+    showMessage('Erro de conexão. Tente novamente.', 'error');
+  }
+}
+
+async function handleLogin(e) {
+  e?.preventDefault();
+  clearMessage();
+  setLoading(e?.target, true);
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  if (!email || !password) {
+    setLoading(e?.target, false);
+    return showMessage('Preencha email e senha', 'error');
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    setLoading(e?.target, false);
+    return showMessage('Digite um email válido', 'error');
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json().catch(() => ({}));
+    setLoading(e?.target, false);
+    if (response.ok && data.token) {
+      token = data.token;
+      localStorage.setItem('authToken', token);
+      authSection.classList.add('hidden');
+      appSection.classList.remove('hidden');
+      updateUserStatus(data.plan, data.credits);
+      showMessage('Login realizado com sucesso!', 'success');
+      emailInput.value = '';
+      passwordInput.value = '';
+    } else {
+      showMessage(data.error || 'Login inválido. Verifique seus dados.', 'error');
+    }
+  } catch (err) {
+    setLoading(e?.target, false);
+    showMessage('Erro de conexão. Tente novamente.', 'error');
+  }
+}
+
+async function handleRequestPasswordReset(e) {
+  e?.preventDefault();
+  clearMessage();
+  setLoading(e?.target, true);
+  const email = resetEmailInput.value.trim();
+  if (!email) {
+    setLoading(e?.target, false);
+    return showMessage('Digite seu email', 'error');
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    setLoading(e?.target, false);
+    return showMessage('Digite um email válido', 'error');
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email })
+    });
+    const data = await response.json().catch(() => ({}));
+    setLoading(e?.target, false);
+    if (response.ok) {
+      showMessage('Link de redefinição enviado! Verifique seu email.', 'success');
+      resetEmailInput.value = '';
+    } else {
+      showMessage(data.error || 'Erro ao enviar link de redefinição', 'error');
+    }
+  } catch (err) {
+    setLoading(e?.target, false);
+    showMessage('Erro de conexão. Tente novamente.', 'error');
+  }
+}
+
+async function handleResetPassword(e) {
+  e?.preventDefault();
+  clearMessage();
+  setLoading(e?.target, true);
+  const password = newPasswordInput.value;
+  const confirmPassword = confirmNewPasswordInput.value;
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  if (!token) {
+    setLoading(e?.target, false);
+    return showMessage('Link de redefinição inválido', 'error');
+  }
+  if (!password || !confirmPassword) {
+    setLoading(e?.target, false);
+    return showMessage('Preencha todos os campos', 'error');
+  }
+  if (password !== confirmPassword) {
+    setLoading(e?.target, false);
+    return showMessage('As senhas não coincidem', 'error');
+  }
+  if (password.length < 6) {
+    setLoading(e?.target, false);
+    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/reset-password`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token, password })
+    });
+    const data = await response.json().catch(() => ({}));
+    setLoading(e?.target, false);
+    if (response.ok) {
+      showMessage('Senha redefinida com sucesso! Faça login.', 'success');
+      newPasswordInput.value = '';
+      confirmNewPasswordInput.value = '';
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showLoginForm();
+      }, 2000);
+    } else {
+      showMessage(data.error || 'Erro ao redefinir senha', 'error');
+    }
+  } catch (err) {
+    setLoading(e?.target, false);
+    showMessage('Erro de conexão. Tente novamente.', 'error');
+  }
+}
+
+// Inicialização dos eventos dos botões
+window.addEventListener('DOMContentLoaded', () => {
+  initElements();
+  // Botões principais
+  const registerBtn = document.querySelector('#registerForm .primary');
+  if (registerBtn) registerBtn.onclick = handleRegister;
+  const loginBtn = document.querySelector('#authForm .primary');
+  if (loginBtn) loginBtn.onclick = handleLogin;
+  const forgotBtn = document.querySelector('#forgotPasswordForm .primary');
+  if (forgotBtn) forgotBtn.onclick = handleRequestPasswordReset;
+  const resetBtn = document.querySelector('#resetPasswordForm .primary');
+  if (resetBtn) resetBtn.onclick = handleResetPassword;
+});
 
 function checkPasswordStrength(password, barElement, textElement) {
   let strength = 0;
