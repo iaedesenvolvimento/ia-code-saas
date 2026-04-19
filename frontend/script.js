@@ -12,7 +12,8 @@ if (
 ) {
   API_BASE_URL = 'http://localhost:3000';
 } else {
-  API_BASE_URL = window.location.origin;
+  // Substitua pela URL real do backend no Render
+  API_BASE_URL = 'https://iacode.onrender.com';
 }
 
 function initElements() {
