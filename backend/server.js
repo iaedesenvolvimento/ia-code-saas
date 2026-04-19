@@ -158,7 +158,7 @@ app.post('/register', async (req, res) => {
     const user = new User({
       email: email.toLowerCase(),
       password: hash,
-      credits: 5,
+      credits: 3,
       plan: 'free'
     });
 
