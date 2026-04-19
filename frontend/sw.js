@@ -53,7 +53,9 @@ self.addEventListener('fetch', (event) => {
             event.request.url.includes('/generate') ||
             event.request.url.includes('/checkout') ||
             event.request.url.includes('/webhook') ||
-            event.request.url.includes('/me')) {
+            event.request.url.includes('/me') ||
+            event.request.url.includes('/forgot-password') ||
+            event.request.url.includes('/reset-password')) {
           return fetch(event.request).catch(() => {
             // Se a API falhar, retorna uma resposta de erro
             return new Response(JSON.stringify({ error: 'API unavailable' }), {

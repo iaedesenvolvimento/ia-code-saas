@@ -34,19 +34,76 @@
 
     <section class="card auth">
       <div class="section-header">
-        <h2>Entrar ou criar conta</h2>
-        <p>Use seu email para acessar o gerador de componentes.</p>
+        <h2 id="authTitle">Entrar na sua conta</h2>
+        <p id="authSubtitle">Use seu email para acessar o gerador de componentes.</p>
       </div>
 
-      <input id="email" placeholder="Digite seu email">
-      <input id="password" type="password" placeholder="Digite sua senha">
+      <div id="authForm">
+        <input id="email" type="email" placeholder="Digite seu email" required>
+        <input id="password" type="password" placeholder="Digite sua senha (mín. 6 caracteres)" required minlength="6">
+
+        <div class="form-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rememberMe">
+            <span class="checkmark"></span>
+            Lembrar de mim
+          </label>
+          <button type="button" class="link-button" onclick="showForgotPassword()">Esqueci minha senha</button>
+        </div>
+
+        <div class="button-row">
+          <button type="button" class="secondary" onclick="toggleAuthMode()">Criar conta</button>
+          <button type="button" class="primary" onclick="login()">Entrar</button>
+        </div>
+      </div>
+
+      <div id="registerForm" class="hidden">
+        <input id="registerEmail" type="email" placeholder="Digite seu email" required>
+        <input id="registerPassword" type="password" placeholder="Crie uma senha (mín. 6 caracteres)" required minlength="6">
+        <input id="confirmPassword" type="password" placeholder="Confirme sua senha" required minlength="6">
+
+        <div class="password-strength">
+          <div class="strength-meter">
+            <div class="strength-bar" id="strengthBar"></div>
+          </div>
+          <span id="strengthText">Força da senha</span>
+        </div>
+
+        <div class="button-row">
+          <button type="button" class="secondary" onclick="toggleAuthMode()">Voltar ao login</button>
+          <button type="button" class="primary" onclick="register()">Criar conta</button>
+        </div>
+      </div>
+
+      <div id="forgotPasswordForm" class="hidden">
+        <p class="form-description">Digite seu email para receber um link de redefinição de senha.</p>
+        <input id="resetEmail" type="email" placeholder="Digite seu email cadastrado" required>
+
+        <div class="button-row">
+          <button type="button" class="secondary" onclick="showLoginForm()">Voltar</button>
+          <button type="button" class="primary" onclick="requestPasswordReset()">Enviar link</button>
+        </div>
+      </div>
+
+      <div id="resetPasswordForm" class="hidden">
+        <p class="form-description">Digite sua nova senha.</p>
+        <input id="newPassword" type="password" placeholder="Nova senha (mín. 6 caracteres)" required minlength="6">
+        <input id="confirmNewPassword" type="password" placeholder="Confirme a nova senha" required minlength="6">
+
+        <div class="password-strength">
+          <div class="strength-meter">
+            <div class="strength-bar" id="newStrengthBar"></div>
+          </div>
+          <span id="newStrengthText">Força da senha</span>
+        </div>
+
+        <div class="button-row">
+          <button type="button" class="secondary" onclick="showLoginForm()">Cancelar</button>
+          <button type="button" class="primary" onclick="resetPassword()">Redefinir senha</button>
+        </div>
+      </div>
 
       <p class="note">Usuários free têm 5 gerações grátis. Faça upgrade para usar sem limites.</p>
-
-      <div class="button-row">
-        <button type="button" class="secondary" onclick="register()">Criar conta</button>
-        <button type="button" class="primary" onclick="login()">Entrar</button>
-      </div>
     </section>
 
     <section class="card app hidden">

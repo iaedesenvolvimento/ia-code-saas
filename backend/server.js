@@ -194,6 +194,88 @@ app.post('/login', async (req, res) => {
   });
 });
 
+// ===== FORGOT PASSWORD =====
+app.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Por segurança, não revelamos se o email existe ou não
+      return res.json({ message: 'Se o email existir, você receberá instruções em breve' });
+    }
+
+    // Gerar token de redefinição (válido por 1 hora)
+    const resetToken = jwt.sign(
+      { id: user._id, type: 'password_reset' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // Em um sistema real, você enviaria um email
+    // Por enquanto, vamos mostrar o link no console para testes
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5500/frontend'}/index.html?token=${resetToken}`;
+
+    console.log(`🔗 Link de redefinição para ${email}: ${resetLink}`);
+
+    res.json({
+      message: 'Link de redefinição enviado! Verifique seu email.',
+      // Para desenvolvimento, incluir o link na resposta
+      resetLink: resetLink
+    });
+  } catch (error) {
+    console.error('Erro no forgot-password:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// ===== RESET PASSWORD =====
+app.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token e nova senha são obrigatórios' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
+    }
+
+    // Verificar token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({ error: 'Token inválido ou expirado' });
+    }
+
+    if (decoded.type !== 'password_reset') {
+      return res.status(400).json({ error: 'Token inválido' });
+    }
+
+    // Buscar usuário
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Hash da nova senha
+    const hash = await bcrypt.hash(password, 10);
+    user.password = hash;
+    await user.save();
+
+    res.json({ message: 'Senha redefinida com sucesso' });
+  } catch (error) {
+    console.error('Erro no reset-password:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // ===== GENERATE CODE =====
 app.post('/generate', auth, async (req, res) => {
   const user = await User.findById(req.user.id);

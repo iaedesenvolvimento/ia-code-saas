@@ -92,11 +92,78 @@ textarea::placeholder {
   color: #94a3b8;
 }
 
-.button-row,
-.buttons {
+.form-options {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-right: 8px;
+  accent-color: #6366f1;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.link-button:hover {
+  color: #7dd3fc;
+}
+
+.form-description {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.password-strength {
+  margin-bottom: 16px;
+}
+
+.strength-meter {
+  width: 100%;
+  height: 4px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 2px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.strength-bar {
+  height: 100%;
+  width: 0%;
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.strength-weak { background: #ef4444; width: 33%; }
+.strength-medium { background: #f59e0b; width: 66%; }
+.strength-strong { background: #10b981; width: 100%; }
+
+#strengthText, #newStrengthText {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .note {

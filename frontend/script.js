@@ -18,6 +18,34 @@ function initElements() {
   planInfo = document.getElementById('planInfo');
   creditsInfo = document.getElementById('creditsInfo');
   generateButton = document.getElementById('generateButton');
+
+  // Novos elementos para formulários aprimorados
+  registerEmailInput = document.getElementById('registerEmail');
+  registerPasswordInput = document.getElementById('registerPassword');
+  confirmPasswordInput = document.getElementById('confirmPassword');
+  resetEmailInput = document.getElementById('resetEmail');
+  newPasswordInput = document.getElementById('newPassword');
+  confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+
+  authTitle = document.getElementById('authTitle');
+  authSubtitle = document.getElementById('authSubtitle');
+  authForm = document.getElementById('authForm');
+  registerForm = document.getElementById('registerForm');
+  forgotPasswordForm = document.getElementById('forgotPasswordForm');
+  resetPasswordForm = document.getElementById('resetPasswordForm');
+
+  strengthBar = document.getElementById('strengthBar');
+  strengthText = document.getElementById('strengthText');
+  newStrengthBar = document.getElementById('newStrengthBar');
+  newStrengthText = document.getElementById('newStrengthText');
+
+  // Event listeners para validação em tempo real
+  if (registerPasswordInput) {
+    registerPasswordInput.addEventListener('input', () => checkPasswordStrength(registerPasswordInput.value, strengthBar, strengthText));
+  }
+  if (newPasswordInput) {
+    newPasswordInput.addEventListener('input', () => checkPasswordStrength(newPasswordInput.value, newStrengthBar, newStrengthText));
+  }
 }
 
 function showMessage(msg, type = 'info') {
@@ -109,34 +137,52 @@ async function register() {
 async function login() {
   clearMessage();
 
-  if (!emailInput.value || !passwordInput.value) {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
+  if (!email || !password) {
     return showMessage('Preencha email e senha', 'error');
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return showMessage('Digite um email válido', 'error');
+  }
+
   try {
-    const res = await fetch(`${API_BASE_URL}/login`, {
+    const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        email: emailInput.value,
-        password: passwordInput.value
+        email: email,
+        password: password
       })
     });
 
-    const data = await res.json();
-
-    if (!data.token) {
-      return showMessage('Login inválido. Verifique seus dados.', 'error');
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      data = { error: `Erro do servidor (${response.status})` };
     }
 
-    token = data.token;
-    localStorage.setItem('authToken', token);
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    updateUserStatus(data.plan, data.credits);
-    showMessage('Login realizado com sucesso!', 'success');
-  } catch {
-    showMessage('Erro no login. Tente novamente.', 'error');
+    if (response.ok && data.token) {
+      token = data.token;
+      localStorage.setItem('authToken', token);
+      authSection.classList.add('hidden');
+      appSection.classList.remove('hidden');
+      updateUserStatus(data.plan, data.credits);
+      showMessage('Login realizado com sucesso!', 'success');
+
+      // Limpar campos após login bem-sucedido
+      emailInput.value = '';
+      passwordInput.value = '';
+    } else {
+      showMessage(data.error || 'Login inválido. Verifique seus dados.', 'error');
+    }
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error');
   }
 }
 
@@ -266,8 +312,251 @@ function copyCode() {
     .catch(() => showMessage('Não foi possível copiar o código.', 'error'));
 }
 
+// ===== FUNÇÕES DE AUTENTICAÇÃO APRIMORADAS =====
+
+function toggleAuthMode() {
+  const isLoginMode = !registerForm.classList.contains('hidden');
+
+  if (isLoginMode) {
+    // Mostrar formulário de cadastro
+    authTitle.textContent = 'Criar nova conta';
+    authSubtitle.textContent = 'Preencha os dados abaixo para criar sua conta.';
+    authForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+    forgotPasswordForm.classList.add('hidden');
+    resetPasswordForm.classList.add('hidden');
+  } else {
+    // Mostrar formulário de login
+    authTitle.textContent = 'Entrar na sua conta';
+    authSubtitle.textContent = 'Use seu email para acessar o gerador de componentes.';
+    authForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+    forgotPasswordForm.classList.add('hidden');
+    resetPasswordForm.classList.add('hidden');
+  }
+}
+
+function showForgotPassword() {
+  authTitle.textContent = 'Esqueci minha senha';
+  authSubtitle.textContent = 'Digite seu email para receber instruções de redefinição.';
+  authForm.classList.add('hidden');
+  registerForm.classList.add('hidden');
+  forgotPasswordForm.classList.remove('hidden');
+  resetPasswordForm.classList.add('hidden');
+}
+
+function showLoginForm() {
+  authTitle.textContent = 'Entrar na sua conta';
+  authSubtitle.textContent = 'Use seu email para acessar o gerador de componentes.';
+  authForm.classList.remove('hidden');
+  registerForm.classList.add('hidden');
+  forgotPasswordForm.classList.add('hidden');
+  resetPasswordForm.classList.add('hidden');
+}
+
+function checkPasswordStrength(password, barElement, textElement) {
+  let strength = 0;
+  let feedback = [];
+
+  if (password.length >= 6) strength++;
+  if (password.length >= 8) strength++;
+  if (/[a-z]/.test(password)) strength++;
+  if (/[A-Z]/.test(password)) strength++;
+  if (/[0-9]/.test(password)) strength++;
+  if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+  barElement.className = 'strength-bar';
+
+  if (strength <= 2) {
+    barElement.classList.add('strength-weak');
+    textElement.textContent = 'Fraca';
+    textElement.style.color = '#ef4444';
+  } else if (strength <= 4) {
+    barElement.classList.add('strength-medium');
+    textElement.textContent = 'Média';
+    textElement.style.color = '#f59e0b';
+  } else {
+    barElement.classList.add('strength-strong');
+    textElement.textContent = 'Forte';
+    textElement.style.color = '#10b981';
+  }
+}
+
+async function register() {
+  clearMessage();
+
+  const email = registerEmailInput.value.trim();
+  const password = registerPasswordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
+
+  if (!email || !password || !confirmPassword) {
+    return showMessage('Preencha todos os campos', 'error');
+  }
+
+  if (password !== confirmPassword) {
+    return showMessage('As senhas não coincidem', 'error');
+  }
+
+  if (password.length < 6) {
+    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
+  }
+
+  // Validação básica de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return showMessage('Digite um email válido', 'error');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/register`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        email: email,
+        password: password
+      })
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      data = { error: `Erro do servidor (${response.status})` };
+    }
+
+    if (response.ok) {
+      showMessage('Conta criada com sucesso! Agora faça login.', 'success');
+      // Limpar campos após sucesso
+      registerEmailInput.value = '';
+      registerPasswordInput.value = '';
+      confirmPasswordInput.value = '';
+      // Voltar para login
+      setTimeout(() => toggleAuthMode(), 2000);
+    } else {
+      showMessage(data.error || `Erro ${response.status}: ${response.statusText}`, 'error');
+    }
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error');
+  }
+}
+
+async function requestPasswordReset() {
+  clearMessage();
+
+  const email = resetEmailInput.value.trim();
+
+  if (!email) {
+    return showMessage('Digite seu email', 'error');
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return showMessage('Digite um email válido', 'error');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email })
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      data = { error: `Erro do servidor (${response.status})` };
+    }
+
+    if (response.ok) {
+      showMessage('Link de redefinição enviado! Verifique seu email.', 'success');
+      resetEmailInput.value = '';
+    } else {
+      showMessage(data.error || 'Erro ao enviar link de redefinição', 'error');
+    }
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    showMessage('Erro de conexão. Tente novamente.', 'error');
+  }
+}
+
+async function resetPassword() {
+  clearMessage();
+
+  const password = newPasswordInput.value;
+  const confirmPassword = confirmNewPasswordInput.value;
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+
+  if (!token) {
+    return showMessage('Link de redefinição inválido', 'error');
+  }
+
+  if (!password || !confirmPassword) {
+    return showMessage('Preencha todos os campos', 'error');
+  }
+
+  if (password !== confirmPassword) {
+    return showMessage('As senhas não coincidem', 'error');
+  }
+
+  if (password.length < 6) {
+    return showMessage('Senha deve ter pelo menos 6 caracteres', 'error');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/reset-password`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        token: token,
+        password: password
+      })
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      data = { error: `Erro do servidor (${response.status})` };
+    }
+
+    if (response.ok) {
+      showMessage('Senha redefinida com sucesso! Faça login.', 'success');
+      // Limpar campos e voltar para login
+      newPasswordInput.value = '';
+      confirmNewPasswordInput.value = '';
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showLoginForm();
+      }, 2000);
+    } else {
+      showMessage(data.error || 'Erro ao redefinir senha', 'error');
+    }
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    showMessage('Erro de conexão. Tente novamente.', 'error');
+  }
+}
+
 async function setupApp() {
   initElements();
+
+  // Verificar se há token de redefinição de senha na URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get('token');
+
+  if (resetToken) {
+    console.log('Token de redefinição encontrado, mostrando formulário...');
+    authTitle.textContent = 'Redefinir senha';
+    authSubtitle.textContent = 'Digite sua nova senha.';
+    authForm.classList.add('hidden');
+    registerForm.classList.add('hidden');
+    forgotPasswordForm.classList.add('hidden');
+    resetPasswordForm.classList.remove('hidden');
+    return; // Não continua com o fluxo normal
+  }
   
   const savedToken = localStorage.getItem('authToken');
   if (savedToken) {
