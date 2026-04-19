@@ -84,11 +84,23 @@ function setLoading(button, state) {
 async function register() {
   clearMessage();
 
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
+  // Detectar se estamos no modo de cadastro ou login
+  const isRegisterMode = !registerForm.classList.contains('hidden');
+
+  const email = isRegisterMode ? registerEmailInput.value.trim() : emailInput.value.trim();
+  const password = isRegisterMode ? registerPasswordInput.value : passwordInput.value;
+  const confirmPassword = isRegisterMode ? confirmPasswordInput.value : null;
 
   if (!email || !password) {
     return showMessage('Preencha email e senha', 'error');
+  }
+
+  if (isRegisterMode && !confirmPassword) {
+    return showMessage('Confirme sua senha', 'error');
+  }
+
+  if (isRegisterMode && password !== confirmPassword) {
+    return showMessage('As senhas não coincidem', 'error');
   }
 
   if (password.length < 6) {
@@ -122,8 +134,16 @@ async function register() {
     if (response.ok) {
       showMessage('Conta criada com sucesso! Agora faça login.', 'success');
       // Limpar campos após sucesso
-      emailInput.value = '';
-      passwordInput.value = '';
+      if (isRegisterMode) {
+        registerEmailInput.value = '';
+        registerPasswordInput.value = '';
+        confirmPasswordInput.value = '';
+        // Voltar para login
+        setTimeout(() => toggleAuthMode(), 2000);
+      } else {
+        emailInput.value = '';
+        passwordInput.value = '';
+      }
     } else {
       // Mostrar mensagem específica do erro
       showMessage(data.error || `Erro ${response.status}: ${response.statusText}`, 'error');
