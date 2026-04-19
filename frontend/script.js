@@ -1,6 +1,8 @@
 let token = '';
 let messageEl, emailInput, passwordInput, promptInput, output, preview, authSection, appSection, planInfo, creditsInfo, generateButton;
 
+console.log('Script carregado');
+
 // URL dinâmica da API (funciona local e produção)
 const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000' 
@@ -46,6 +48,8 @@ function initElements() {
   if (newPasswordInput) {
     newPasswordInput.addEventListener('input', () => checkPasswordStrength(newPasswordInput.value, newStrengthBar, newStrengthText));
   }
+
+  console.log('Elementos inicializados');
 }
 
 function showMessage(msg, type = 'info') {
@@ -572,6 +576,7 @@ async function resetPassword() {
 
 async function setupApp() {
   initElements();
+  console.log('setupApp chamado');
 
   // Verificar se há token de redefinição de senha na URL
   const urlParams = new URLSearchParams(window.location.search);
