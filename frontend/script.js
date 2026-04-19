@@ -587,6 +587,12 @@ async function setupApp() {
   initElements();
   console.log('setupApp chamado');
 
+  // Garantir estado inicial dos formulários
+  authForm.classList.remove('hidden');
+  registerForm.classList.add('hidden');
+  forgotPasswordForm.classList.add('hidden');
+  resetPasswordForm.classList.add('hidden');
+
   // Verificar se há token de redefinição de senha na URL
   const urlParams = new URLSearchParams(window.location.search);
   const resetToken = urlParams.get('token');
