@@ -12,16 +12,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 app.use(cors());
 
-const stripe = new Stripe(process.env.STRIPE_KEY);
-const openai = new OpenAI({ 
+const stripe = new Stripe(process.env.STRIPE_KEY || 'sk_test_dummy');
+const openai = process.env.OPENROUTER_KEY ? new OpenAI({
   apiKey: process.env.OPENROUTER_KEY,
   baseURL: "https://openrouter.ai/api/v1"
-});
+}) : null;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5500/frontend';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 
@@ -203,6 +203,10 @@ app.post('/generate', auth, async (req, res) => {
   }
 
   const { prompt } = req.body;
+
+  if (!openai) {
+    return res.status(503).json({ error: 'Serviço de IA não configurado' });
+  }
 
   const ai = await openai.chat.completions.create({
     model: 'openai/gpt-4o-mini',
