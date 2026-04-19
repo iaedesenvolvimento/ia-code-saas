@@ -160,10 +160,13 @@ async function register() {
 }
 
 async function login() {
+  console.log('Função login chamada');
   clearMessage();
 
   const email = emailInput.value.trim();
   const password = passwordInput.value;
+
+  console.log('Email:', email, 'Password length:', password.length);
 
   if (!email || !password) {
     return showMessage('Preencha email e senha', 'error');
@@ -175,6 +178,7 @@ async function login() {
   }
 
   try {
+    console.log('Fazendo fetch para login:', `${API_BASE_URL}/login`);
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -191,6 +195,7 @@ async function login() {
       data = { error: `Erro do servidor (${response.status})` };
     }
 
+    console.log('Login response:', response.status, data);
     if (response.ok && data.token) {
       token = data.token;
       localStorage.setItem('authToken', token);
