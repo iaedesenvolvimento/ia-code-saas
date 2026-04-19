@@ -2,7 +2,9 @@ let token = '';
 let messageEl, emailInput, passwordInput, promptInput, output, preview, authSection, appSection, planInfo, creditsInfo, generateButton;
 
 // URL dinâmica da API (funciona local e produção)
-const API_BASE_URL = window.location.origin;
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3000' 
+  : window.location.origin;
 
 function initElements() {
   messageEl = document.getElementById('message');
@@ -81,7 +83,13 @@ async function register() {
       })
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      // Se não conseguir fazer parse do JSON, cria um objeto de erro
+      data = { error: `Erro do servidor (${response.status})` };
+    }
 
     if (response.ok) {
       showMessage('Conta criada com sucesso! Agora faça login.', 'success');
@@ -90,11 +98,11 @@ async function register() {
       passwordInput.value = '';
     } else {
       // Mostrar mensagem específica do erro
-      showMessage(data.error || 'Erro ao registrar', 'error');
+      showMessage(data.error || `Erro ${response.status}: ${response.statusText}`, 'error');
     }
   } catch (error) {
     console.error('Erro na requisição:', error);
-    showMessage('Erro de conexão. Tente novamente.', 'error');
+    showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error');
   }
 }
 
