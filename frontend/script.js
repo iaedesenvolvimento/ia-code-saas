@@ -354,9 +354,12 @@ function copyCode() {
 // ===== FUNÇÕES DE AUTENTICAÇÃO APRIMORADAS =====
 
 function toggleAuthMode() {
+  console.log('toggleAuthMode chamado');
   const isLoginMode = !registerForm.classList.contains('hidden');
+  console.log('isLoginMode:', isLoginMode);
 
   if (isLoginMode) {
+    console.log('Mostrando formulário de cadastro');
     // Mostrar formulário de cadastro
     authTitle.textContent = 'Criar nova conta';
     authSubtitle.textContent = 'Preencha os dados abaixo para criar sua conta.';
@@ -365,6 +368,7 @@ function toggleAuthMode() {
     forgotPasswordForm.classList.add('hidden');
     resetPasswordForm.classList.add('hidden');
   } else {
+    console.log('Mostrando formulário de login');
     // Mostrar formulário de login
     authTitle.textContent = 'Entrar na sua conta';
     authSubtitle.textContent = 'Use seu email para acessar o gerador de componentes.';
