@@ -227,6 +227,8 @@ app.post('/forgot-password', async (req, res) => {
       { expiresIn: '1h' }
     );
 
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5500/frontend'}/index.html?token=${resetToken}`;
+
     // Enviar e-mail real com Resend
     try {
       await resend.emails.send({
