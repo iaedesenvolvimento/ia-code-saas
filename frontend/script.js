@@ -91,12 +91,14 @@ function showStatus(msg, type = 'info') {
 function setButtonLoading(btn, isLoading, text = 'Carregando...') {
   if (!btn) return;
   if (isLoading) {
-    btn.dataset.originalText = btn.innerHTML;
+    if (!btn.dataset.originalText) btn.dataset.originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<span>⏳</span> ${text}`;
+    btn.style.pointerEvents = 'none';
   } else {
     btn.disabled = false;
-    btn.innerHTML = btn.dataset.originalText || 'Enviar';
+    btn.innerHTML = btn.dataset.originalText || 'Salvar';
+    btn.style.pointerEvents = 'auto';
   }
 }
 
