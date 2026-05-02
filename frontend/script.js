@@ -482,8 +482,9 @@ async function resetPassword() {
     if (res.ok) {
       showStatus('Senha alterada com sucesso! Redirecionando...', 'success');
       setTimeout(() => {
-        // Redireciona para a página principal sem os parâmetros de token na URL
-        window.location.href = window.location.origin + window.location.pathname;
+        // Redireciona para a página principal limpando a barra de endereços de forma robusta
+        const cleanPath = window.location.pathname.replace(/\/+/g, '/');
+        window.location.href = window.location.origin + cleanPath;
       }, 2000);
     } else {
       showStatus(data.error || 'Erro ao redefinir senha', 'error');
