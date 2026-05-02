@@ -19,10 +19,15 @@ const app = express();
 app.use(cors());
 
 const stripe = new Stripe(process.env.STRIPE_KEY || 'sk_test_dummy');
-const openai = process.env.OPENROUTER_KEY ? new OpenAI({
-  apiKey: process.env.OPENROUTER_KEY,
-  baseURL: "https://openrouter.ai/api/v1"
-}) : null;
+const getOpenAI = () => {
+  if (process.env.OPENROUTER_KEY) {
+    return new OpenAI({
+      apiKey: process.env.OPENROUTER_KEY,
+      baseURL: "https://openrouter.ai/api/v1"
+    });
+  }
+  return null;
+};
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5500/frontend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -318,9 +323,11 @@ app.post('/generate', auth, async (req, res) => {
   }
 
   const { prompt, image } = req.body;
+  const aiClient = getOpenAI();
 
-  if (!openai) {
-    return res.status(503).json({ error: 'Serviço de IA não configurado' });
+  if (!aiClient) {
+    console.error('OPENROUTER_KEY não encontrada no process.env');
+    return res.status(503).json({ error: 'Serviço de IA não configurado (Chave ausente)' });
   }
 
   let userContent = [];
@@ -334,7 +341,7 @@ app.post('/generate', auth, async (req, res) => {
     });
   }
 
-  const ai = await openai.chat.completions.create({
+  const ai = await aiClient.chat.completions.create({
     model: 'openai/gpt-4o-mini',
     messages: [
       { 
