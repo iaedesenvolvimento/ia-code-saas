@@ -341,31 +341,39 @@ app.post('/generate', auth, async (req, res) => {
     });
   }
 
-  const ai = await aiClient.chat.completions.create({
-    model: 'openai/gpt-4o-mini',
-    messages: [
-      { 
-        role: 'system', 
-        content: `Você é um desenvolvedor frontend especialista em UI/UX. 
-        Gere componentes modernos, responsivos e visualmente atraentes. 
-        Sempre retorne o código dividido em blocos de markdown: \`\`\`html\`, \`\`\`css\` e \`\`\`javascript\`.
-        Use cores modernas, fontes elegantes e boas práticas de acessibilidade. 
-        Não inclua textos explicativos longos antes ou depois do código, foque no snippet.` 
-      },
-      { role: 'user', content: userContent.length > 0 ? userContent : prompt }
-    ]
-  });
+  try {
+    const ai = await aiClient.chat.completions.create({
+      model: 'openai/gpt-4o-mini',
+      messages: [
+        { 
+          role: 'system', 
+          content: `Você é um desenvolvedor frontend especialista em UI/UX. 
+          Gere componentes modernos, responsivos e visualmente atraentes. 
+          Sempre retorne o código dividido em blocos de markdown: \`\`\`html\`, \`\`\`css\` e \`\`\`javascript\`.
+          Use cores modernas, fontes elegantes e boas práticas de acessibilidade. 
+          Não inclua textos explicativos longos antes ou depois do código, foque no snippet.` 
+        },
+        { role: 'user', content: userContent.length > 0 ? userContent : prompt }
+      ]
+    });
 
-  if (user.plan !== 'pro') {
-    user.credits--;
-    await user.save();
+    if (user.plan !== 'pro') {
+      user.credits--;
+      await user.save();
+    }
+
+    res.json({
+      code: ai.choices[0].message.content,
+      credits: user.credits,
+      plan: user.plan
+    });
+  } catch (error) {
+    console.error('ERRO CRÍTICO NA GERAÇÃO:', error);
+    res.status(500).json({ 
+      error: 'Erro na comunicação com a IA', 
+      details: error.message 
+    });
   }
-
-  res.json({
-    code: ai.choices[0].message.content,
-    credits: user.credits,
-    plan: user.plan
-  });
 });
 
 // ===== ME =====
