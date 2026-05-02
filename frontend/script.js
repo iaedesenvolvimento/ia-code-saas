@@ -482,7 +482,10 @@ async function resetPassword() {
     if (res.ok) {
       showStatus('Senha alterada com sucesso! Faça login.', 'success');
       setTimeout(() => {
-        window.location.href = window.location.pathname; // Limpa o token da URL e volta pro login
+        // Volta para a tela de login
+        showForm('auth');
+        // Limpa o token da URL para o usuário não ficar preso na tela de reset ao atualizar
+        window.history.pushState({}, document.title, window.location.pathname);
       }, 2000);
     } else {
       showStatus(data.error || 'Erro ao redefinir senha', 'error');
