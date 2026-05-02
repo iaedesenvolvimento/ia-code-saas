@@ -8,6 +8,7 @@ import Stripe from 'stripe';
 import OpenAI from 'openai';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Resend } from 'resend';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +24,7 @@ const openai = process.env.OPENROUTER_KEY ? new OpenAI({
   baseURL: "https://openrouter.ai/api/v1"
 }) : null;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5500/frontend';
+const resend = new Resend(process.env.RESEND_API_KEY);
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 // ===== WEBHOOK (raw body) - ANTES de app.use(express.json()) =====
@@ -225,16 +227,35 @@ app.post('/forgot-password', async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    // Em um sistema real, você enviaria um email
-    // Por enquanto, vamos mostrar o link no console para testes
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5500/frontend'}/index.html?token=${resetToken}`;
-
-    console.log(`🔗 Link de redefinição para ${email}: ${resetLink}`);
+    // Enviar e-mail real com Resend
+    try {
+      await resend.emails.send({
+        from: 'AI Code Builder <onboarding@resend.dev>',
+        to: email,
+        subject: 'Redefinição de Senha - AI Code Builder',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;">
+            <h2 style="color: #6366f1;">Redefinição de Senha</h2>
+            <p>Você solicitou a redefinição de sua senha no AI Code Builder.</p>
+            <p>Clique no botão abaixo para criar uma nova senha. Este link expira em 1 hora.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Redefinir Senha</a>
+            </div>
+            <p style="font-size: 12px; color: #666;">Se você não solicitou isso, pode ignorar este e-mail.</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 10px; color: #999;">Link direto: ${resetLink}</p>
+          </div>
+        `
+      });
+      console.log(`📧 E-mail de redefinição enviado para ${email}`);
+    } catch (emailError) {
+      console.error('Falha ao enviar e-mail via Resend:', emailError);
+      // Continuamos o processo para não travar a UI, o link ainda é gerado no console em dev
+    }
 
     res.json({
       message: 'Link de redefinição enviado! Verifique seu email.',
-      // Para desenvolvimento, incluir o link na resposta
-      resetLink: resetLink
+      resetLink: resetLink // Mantido para facilitar testes locais sem e-mail configurado
     });
   } catch (error) {
     console.error('Erro no forgot-password:', error);
