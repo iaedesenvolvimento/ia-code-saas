@@ -480,14 +480,10 @@ async function resetPassword() {
 
     const data = await res.json();
     if (res.ok) {
-      showStatus('Senha alterada com sucesso! Faça login.', 'success');
+      showStatus('Senha alterada com sucesso! Redirecionando...', 'success');
       setTimeout(() => {
-        // Volta para a tela de login via DOM
-        showForm('auth');
-        
-        // Limpa o token da URL SEM recarregar a página
-        const cleanURL = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanURL);
+        // Redireciona para a página principal sem os parâmetros de token na URL
+        window.location.href = window.location.origin + window.location.pathname;
       }, 2000);
     } else {
       showStatus(data.error || 'Erro ao redefinir senha', 'error');
