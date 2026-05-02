@@ -131,5 +131,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
   
   <script src="script.js"></script>
+  
+  <!-- Registro do PWA Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker Registrado!', reg.scope))
+          .catch(err => console.error('Erro no Service Worker:', err));
+      });
+    }
+  </script>
 </body>
 </html>
