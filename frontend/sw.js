@@ -28,6 +28,7 @@ const urlsToCache = isProduction ? [
 
 // Instalar Service Worker
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Força a ativação imediata do novo Service Worker
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -49,7 +50,7 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Assume o controle imediatamente
   );
 });
 
