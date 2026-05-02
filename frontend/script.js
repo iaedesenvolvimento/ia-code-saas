@@ -52,8 +52,14 @@ function init() {
   elements.forms.forgot = document.getElementById('forgotPasswordForm');
   elements.forms.reset = document.getElementById('resetPasswordForm');
 
+  // Persistência: se já temos token, mostramos o app imediatamente
+  if (token) {
+    if (elements.authSection) elements.authSection.classList.add('hidden');
+    if (elements.appSection) elements.appSection.classList.remove('hidden');
+    checkSession(); // Valida o token com o servidor em background
+  }
+
   handleDeepLinks();
-  checkSession();
   setupEventListeners();
 }
 
