@@ -4,6 +4,7 @@
  */
 
 let token = localStorage.getItem('authToken') || '';
+let currentAttachedImage = null;
 let API_BASE_URL;
 
 // Identify API URL based on environment
@@ -227,7 +228,7 @@ async function generate(e) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({ prompt, image: currentAttachedImage })
     });
 
     const data = await res.json();
@@ -243,6 +244,39 @@ async function generate(e) {
   } finally {
     setButtonLoading(elements.generateBtn, false);
   }
+}
+
+// Handler para anexar imagem
+function handleImageSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.type.startsWith('image/')) {
+    showStatus('Por favor, selecione um arquivo de imagem válido', 'error');
+    return;
+  }
+  
+  // Limite de tamanho (ex: 4MB)
+  if (file.size > 4 * 1024 * 1024) {
+    showStatus('A imagem deve ter no máximo 4MB', 'error');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    currentAttachedImage = e.target.result;
+    document.getElementById('imagePreview').src = currentAttachedImage;
+    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Handler para remover a imagem anexada
+function removeImage() {
+  currentAttachedImage = null;
+  document.getElementById('imageInput').value = '';
+  document.getElementById('imagePreviewContainer').classList.add('hidden');
+  document.getElementById('imagePreview').src = '';
 }
 
 function displayGeneratedCode(rawCode) {
@@ -388,9 +422,25 @@ async function requestPasswordReset() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
-    if (res.ok) showStatus('Link de recuperação enviado!', 'success');
-    else showStatus('Erro ao enviar link', 'error');
-  } catch (err) { showStatus('Erro de conexão', 'error'); }
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      showStatus('Link de recuperação gerado!', 'success');
+      
+      // Como não há servidor de e-mail configurado (Nodemailer/SendGrid), exibimos o link na tela
+      if (data.resetLink) {
+        setTimeout(() => {
+          const copiar = prompt("Email não configurado no Backend.\n\nCopie o link abaixo para redefinir sua senha:", data.resetLink);
+          if (copiar) window.location.href = data.resetLink;
+        }, 500);
+      }
+    } else {
+      showStatus(data.error || 'Erro ao enviar link', 'error');
+    }
+  } catch (err) { 
+    showStatus('Erro de conexão', 'error'); 
+  }
   finally { setButtonLoading(btn, false); }
 }
 

@@ -86,7 +86,16 @@ app.get('*', (req, res) => {
 });
 
 // ===== DATABASE =====
-mongoose.connect(process.env.MONGO_URI);
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 5000, // Falha rápido se não achar o servidor
+  family: 4 // Força o uso de IPv4 (Resolve problemas de ECONNRESET no Node 18+)
+})
+.then(() => console.log('✅ Conectado ao MongoDB com sucesso!'))
+.catch(err => {
+  console.error('❌ ERRO CRÍTICO: Falha ao conectar no MongoDB!');
+  console.error(err.message);
+  console.error('Verifique sua rede, senha ou se a porta 27017 não está bloqueada pelo seu provedor de internet.');
+});
 
 const User = mongoose.model('User', new mongoose.Schema({
   email: {
@@ -284,10 +293,21 @@ app.post('/generate', auth, async (req, res) => {
     return res.status(403).json({ error: 'Sem créditos' });
   }
 
-  const { prompt } = req.body;
+  const { prompt, image } = req.body;
 
   if (!openai) {
     return res.status(503).json({ error: 'Serviço de IA não configurado' });
+  }
+
+  let userContent = [];
+  if (prompt) {
+    userContent.push({ type: "text", text: prompt });
+  }
+  if (image) {
+    userContent.push({
+      type: "image_url",
+      image_url: { url: image }
+    });
   }
 
   const ai = await openai.chat.completions.create({
@@ -301,7 +321,7 @@ app.post('/generate', auth, async (req, res) => {
         Use cores modernas, fontes elegantes e boas práticas de acessibilidade. 
         Não inclua textos explicativos longos antes ou depois do código, foque no snippet.` 
       },
-      { role: 'user', content: prompt }
+      { role: 'user', content: userContent.length > 0 ? userContent : prompt }
     ]
   });
 
