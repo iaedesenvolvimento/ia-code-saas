@@ -457,6 +457,43 @@ async function checkout() {
   } catch { showStatus('Erro no Stripe', 'error'); }
 }
 
+async function resetPassword() {
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmNewPassword').value;
+  const btn = document.querySelector('#resetPasswordForm .primary');
+
+  // Pega o token da URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get('token');
+
+  if (!resetToken) return showStatus('Token de recuperação ausente', 'error');
+  if (newPassword.length < 6) return showStatus('A senha deve ter 6+ caracteres', 'error');
+  if (newPassword !== confirmPassword) return showStatus('As senhas não coincidem', 'error');
+
+  setButtonLoading(btn, true, 'Salvando...');
+  try {
+    const res = await fetch(`${API_BASE_URL}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: resetToken, password: newPassword })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showStatus('Senha alterada com sucesso! Faça login.', 'success');
+      setTimeout(() => {
+        window.location.href = window.location.pathname; // Limpa o token da URL e volta pro login
+      }, 2000);
+    } else {
+      showStatus(data.error || 'Erro ao redefinir senha', 'error');
+    }
+  } catch (err) {
+    showStatus('Erro ao conectar com o servidor', 'error');
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
 // Initial Boot
 document.addEventListener('DOMContentLoaded', init);
 
